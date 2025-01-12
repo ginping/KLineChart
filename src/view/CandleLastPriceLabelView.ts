@@ -12,13 +12,11 @@
  * limitations under the License.
  */
 
-import { YAxisType } from '../common/Styles'
-import { formatPrecision, formatThousands } from '../common/utils/format'
 import { isValid } from '../common/utils/typeChecks'
 
 import View from './View'
 
-import YAxis from '../component/YAxis'
+import type YAxis from '../component/YAxis'
 
 export default class CandleLastPriceLabelView extends View {
   override drawImp (ctx: CanvasRenderingContext2D): void {
@@ -33,12 +31,11 @@ export default class CandleLastPriceLabelView extends View {
       const precision = chartStore.getPrecision()
       const yAxis = pane.getAxisComponent() as YAxis
       const dataList = chartStore.getDataList()
-      const visibleDataList = chartStore.getVisibleDataList()
       const data = dataList[dataList.length - 1]
       if (isValid(data)) {
         const { close, open } = data
         const priceY = yAxis.convertToNicePixel(close)
-        let backgroundColor: string
+        let backgroundColor = ''
         if (close > open) {
           backgroundColor = lastPriceMarkStyles.upColor
         } else if (close < open) {
@@ -46,17 +43,17 @@ export default class CandleLastPriceLabelView extends View {
         } else {
           backgroundColor = lastPriceMarkStyles.noChangeColor
         }
-        let text: string
-        if (yAxis.getType() === YAxisType.Percentage) {
-          const fromData = visibleDataList[0].data
-          const fromClose = fromData.close
-          text = `${((close - fromClose) / fromClose * 100).toFixed(2)}%`
-        } else {
-          text = formatPrecision(close, precision.price)
-        }
-        text = formatThousands(text, chartStore.getThousandsSeparator())
-        let x: number
-        let textAlgin: CanvasTextAlign
+        const yAxisRange = yAxis.getRange()
+        let text = yAxis.displayValueToText(
+          yAxis.realValueToDisplayValue(
+            yAxis.valueToRealValue(close, { range: yAxisRange }),
+            { range: yAxisRange }
+          ),
+          precision.price
+        )
+        text = chartStore.getDecimalFold().format(chartStore.getThousandsSeparator().format(text))
+        let x = 0
+        let textAlgin: CanvasTextAlign = 'left'
         if (yAxis.isFromZero()) {
           x = 0
           textAlgin = 'left'
@@ -64,20 +61,20 @@ export default class CandleLastPriceLabelView extends View {
           x = bounding.width
           textAlgin = 'right'
         }
-        this.createFigure(
-          'text',
-          {
+        this.createFigure({
+          name: 'text',
+          attrs: {
             x,
             y: priceY,
             text,
             align: textAlgin,
             baseline: 'middle'
           },
-          {
+          styles: {
             ...lastPriceMarkTextStyles,
             backgroundColor
           }
-        )?.draw(ctx)
+        })?.draw(ctx)
       }
     }
   }

@@ -12,8 +12,8 @@
  * limitations under the License.
  */
 
-import KLineData from '../../common/KLineData'
-import { Indicator, IndicatorTemplate, IndicatorSeries } from '../../component/Indicator'
+import type { KLineData } from '../../common/Data'
+import { type Indicator, type IndicatorTemplate, IndicatorSeries } from '../../component/Indicator'
 
 interface Ma {
   ma1?: number
@@ -33,16 +33,12 @@ const movingAverage: IndicatorTemplate<Ma> = {
   precision: 2,
   shouldOhlc: true,
   figures: [
-    { key: 'ma5', title: 'MA5: ', type: 'line' },
-    { key: 'ma10', title: 'MA10: ', type: 'line' },
-    { key: 'ma30', title: 'MA30: ', type: 'line' },
-    { key: 'ma60', title: 'MA60: ', type: 'line' }
+    { key: 'ma1', title: 'MA5: ', type: 'line' },
+    { key: 'ma2', title: 'MA10: ', type: 'line' },
+    { key: 'ma3', title: 'MA30: ', type: 'line' },
+    { key: 'ma4', title: 'MA60: ', type: 'line' }
   ],
-  regenerateFigures: (params: any[]) => {
-    return params.map((p: number, i: number) => {
-      return { key: `ma${i + 1}`, title: `MA${p}: `, type: 'line' }
-    })
-  },
+  regenerateFigures: (params: unknown[]) => params.map((p: number, i: number) => ({ key: `ma${i + 1}`, title: `MA${p}: `, type: 'line' })),
   calc: (dataList: KLineData[], indicator: Indicator<Ma>) => {
     const { calcParams: params, figures } = indicator
     const closeSums: number[] = []

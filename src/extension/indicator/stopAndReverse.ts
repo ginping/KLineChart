@@ -12,14 +12,15 @@
  * limitations under the License.
  */
 
-import KLineData from '../../common/KLineData'
-import { IndicatorStyle } from '../../common/Styles'
+import type { KLineData } from '../../common/Data'
 import { formatValue } from '../../common/utils/format'
 
-import { Indicator, IndicatorTemplate, IndicatorSeries, IndicatorFigureStylesCallbackData } from '../../component/Indicator'
+import { type Indicator, type IndicatorTemplate, IndicatorSeries } from '../../component/Indicator'
 
 interface Sar {
   sar?: number
+  high: number
+  low: number
 }
 
 const stopAndReverse: IndicatorTemplate<Sar> = {
@@ -34,20 +35,19 @@ const stopAndReverse: IndicatorTemplate<Sar> = {
       key: 'sar',
       title: 'SAR: ',
       type: 'circle',
-      styles: (data: IndicatorFigureStylesCallbackData<Sar>, indicator: Indicator, defaultStyles: IndicatorStyle) => {
+      styles: ({ data, indicator, defaultStyles }) => {
         const { current } = data
-        const sar = current.indicatorData?.sar ?? Number.MIN_SAFE_INTEGER
-        const kLineData = current.kLineData as KLineData
-        const halfHL = (kLineData?.high + kLineData?.low) / 2
+        const sar = current?.sar ?? Number.MIN_SAFE_INTEGER
+        const halfHL = ((current?.high ?? 0) + (current?.low ?? 0)) / 2
         const color = sar < halfHL
-          ? formatValue(indicator.styles, 'circles[0].upColor', (defaultStyles.circles)[0].upColor) as string
-          : formatValue(indicator.styles, 'circles[0].downColor', (defaultStyles.circles)[0].downColor) as string
+          ? formatValue(indicator.styles, 'circles[0].upColor', (defaultStyles!.circles)[0].upColor) as string
+          : formatValue(indicator.styles, 'circles[0].downColor', (defaultStyles!.circles)[0].downColor) as string
         return { color }
       }
     }
   ],
   calc: (dataList: KLineData[], indicator: Indicator<Sar>) => {
-    const params = indicator.calcParams
+    const params = indicator.calcParams as number[]
     const startAf = params[0] / 100
     const step = params[1] / 100
     const maxAf = params[2] / 100
@@ -100,7 +100,7 @@ const stopAndReverse: IndicatorTemplate<Sar> = {
           sar = highMax
         }
       }
-      return { sar }
+      return { high, low, sar }
     })
   }
 }

@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-import { Locales } from '../../Options'
+import type { Locales } from '../../Options'
 
 import zhCN from './zh-CN'
 import enUS from './en-US'
@@ -31,7 +31,7 @@ function getSupportedLocales (): string[] {
 }
 
 function i18n (key: string, locale: string): string {
-  return locales[locale]?.[key] ?? key
+  return locales[locale][key] ?? key
 }
 
 export { i18n, registerLocale, getSupportedLocales }

@@ -12,27 +12,37 @@
  * limitations under the License.
  */
 
-import Coordinate from '../../common/Coordinate'
-import { PolygonStyle, PolygonType, LineType } from '../../common/Styles'
+import type Coordinate from '../../common/Coordinate'
+import { type PolygonStyle, PolygonType, LineType } from '../../common/Styles'
+import { isString } from '../../common/utils/typeChecks'
+import { isTransparent } from '../../common/utils/color'
 
-import { FigureTemplate } from '../../component/Figure'
+import type { FigureTemplate } from '../../component/Figure'
 
-export function checkCoordinateOnPolygon (coordinate: Coordinate, polygon: PolygonAttrs): boolean {
-  let on = false
-  const coordinates = polygon.coordinates
-  for (let i = 0, j = coordinates.length - 1; i < coordinates.length; j = i++) {
-    if (
-      (coordinates[i].y > coordinate.y) !== (coordinates[j].y > coordinate.y) &&
-      (coordinate.x < (coordinates[j].x - coordinates[i].x) * (coordinate.y - coordinates[i].y) / (coordinates[j].y - coordinates[i].y) + coordinates[i].x)
-    ) {
-      on = !on
+export function checkCoordinateOnPolygon (coordinate: Coordinate, attrs: PolygonAttrs | PolygonAttrs[]): boolean {
+  let polygons: PolygonAttrs[] = []
+  polygons = polygons.concat(attrs)
+  for (const polygon of polygons) {
+    let on = false
+    const { coordinates } = polygon
+    for (let i = 0, j = coordinates.length - 1; i < coordinates.length; j = i++) {
+      if (
+        (coordinates[i].y > coordinate.y) !== (coordinates[j].y > coordinate.y) &&
+        (coordinate.x < (coordinates[j].x - coordinates[i].x) * (coordinate.y - coordinates[i].y) / (coordinates[j].y - coordinates[i].y) + coordinates[i].x)
+      ) {
+        on = !on
+      }
+    }
+    if (on) {
+      return true
     }
   }
-  return on
+  return false
 }
 
-export function drawPolygon (ctx: CanvasRenderingContext2D, attrs: PolygonAttrs, styles: Partial<PolygonStyle>): void {
-  const { coordinates } = attrs
+export function drawPolygon (ctx: CanvasRenderingContext2D, attrs: PolygonAttrs | PolygonAttrs[], styles: Partial<PolygonStyle>): void {
+  let polygons: PolygonAttrs[] = []
+  polygons = polygons.concat(attrs)
   const {
     style = PolygonType.Fill,
     color = 'currentColor',
@@ -41,17 +51,21 @@ export function drawPolygon (ctx: CanvasRenderingContext2D, attrs: PolygonAttrs,
     borderStyle = LineType.Solid,
     borderDashedValue = [2, 2]
   } = styles
-  if (style === PolygonType.Fill || styles.style === PolygonType.StrokeFill) {
+  if (
+    (style === PolygonType.Fill || styles.style === PolygonType.StrokeFill) &&
+    (!isString(color) || !isTransparent(color))) {
     ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.moveTo(coordinates[0].x, coordinates[0].y)
-    for (let i = 1; i < coordinates.length; i++) {
-      ctx.lineTo(coordinates[i].x, coordinates[i].y)
-    }
-    ctx.closePath()
-    ctx.fill()
+    polygons.forEach(({ coordinates }) => {
+      ctx.beginPath()
+      ctx.moveTo(coordinates[0].x, coordinates[0].y)
+      for (let i = 1; i < coordinates.length; i++) {
+        ctx.lineTo(coordinates[i].x, coordinates[i].y)
+      }
+      ctx.closePath()
+      ctx.fill()
+    })
   }
-  if (style === PolygonType.Stroke || styles.style === PolygonType.StrokeFill) {
+  if ((style === PolygonType.Stroke || styles.style === PolygonType.StrokeFill) && borderSize > 0 && !isTransparent(borderColor)) {
     ctx.strokeStyle = borderColor
     ctx.lineWidth = borderSize
     if (borderStyle === LineType.Dashed) {
@@ -59,13 +73,15 @@ export function drawPolygon (ctx: CanvasRenderingContext2D, attrs: PolygonAttrs,
     } else {
       ctx.setLineDash([])
     }
-    ctx.beginPath()
-    ctx.moveTo(coordinates[0].x, coordinates[0].y)
-    for (let i = 1; i < coordinates.length; i++) {
-      ctx.lineTo(coordinates[i].x, coordinates[i].y)
-    }
-    ctx.closePath()
-    ctx.stroke()
+    polygons.forEach(({ coordinates }) => {
+      ctx.beginPath()
+      ctx.moveTo(coordinates[0].x, coordinates[0].y)
+      for (let i = 1; i < coordinates.length; i++) {
+        ctx.lineTo(coordinates[i].x, coordinates[i].y)
+      }
+      ctx.closePath()
+      ctx.stroke()
+    })
   }
 }
 
@@ -73,10 +89,10 @@ export interface PolygonAttrs {
   coordinates: Coordinate[]
 }
 
-const polygon: FigureTemplate<PolygonAttrs, Partial<PolygonStyle>> = {
+const polygon: FigureTemplate<PolygonAttrs | PolygonAttrs[], Partial<PolygonStyle>> = {
   name: 'polygon',
   checkEventOn: checkCoordinateOnPolygon,
-  draw: (ctx: CanvasRenderingContext2D, attrs: PolygonAttrs, styles: Partial<PolygonStyle>) => {
+  draw: (ctx: CanvasRenderingContext2D, attrs: PolygonAttrs | PolygonAttrs[], styles: Partial<PolygonStyle>) => {
     drawPolygon(ctx, attrs, styles)
   }
 }

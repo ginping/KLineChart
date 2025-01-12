@@ -1,185 +1,54 @@
 # 📠 更新日志
 
-## 9.6.0
-`2023-11-14`
-+ 🖋️ 重构窗口之间的分割线模块。
-+ 🆕 图表方法`init(ds, options)`，参数`options`新增`layout`。
-+ 🆕 实例方法`createIndicator(value, isStack, paneOptions, callback)`，参数`paneOptions`新增`position`。
-+ 🆕 样式`candle.tooltip.custom`新增`turnover`字符串模版。
-+ 💄 优化样式`overlay.text`配置。
-+ 💄 优化`utils.clone`和`utils.merge`实现。
-+ 🐞 修复多个覆盖物样式显示不对问题。
-+ 🐞 修复多个指标样式显示不对问题。
+## 10.0.0-alpha2
+`2024-12-20`
++ 🆕 x轴支持显示未来时间。
++ 🐞 修复 `subscribeAction` 类型是 `ActionType.OnCandleBarClick` 不生效问题。
 
-
-## 9.5.4
-`2023-09-22`
-+ 🐞 修复样式`candle.type`是`area`时，最新价线不显示问题。
-+ 🐞 修复样式`crosshair.vertical.text.paddingLeft`显示不对问题。
-
-## 9.5.3
-`2023-09-19`
-+ 🐞 修复ts下引入问题。
-
-## 9.5.2
-`2023-09-18`
-+ 💄 优化基础图形`text`。
-+ 💄 优化内置覆盖物`simpleAnnotation`和`simpleTag`。
-+ 💄 优化技术指标自由样式，支持增量。
-+ 🐞 修复typescript声明问题。
-
-## 9.5.1
-`2023-08-14`
-+ 🆕 图表方法新增`getOverlayClass`。
-+ 🆕 样式配置`candle.tooltip.custom`新增内置涨跌幅支持。
-+ 💄 优化基础图形`rect`事件响应。
-+ ↩️ 分割线事件响应回退
-
-
-## 9.5.0
-`2023-06-15`
-+ 🆕 `Overlay`新增事件`onDoubleClick`，新增属性`modeSensitivity`。
-+ 🆕 样式配置`candle.tooltip.custom`支持字符串模版。
-+ 🐞 优化移动端阻尼滚动掉帧问题。
-+ 🐞 修复窗口id命名拼写错误。
-+ 💄 优化分割线事件响应灵敏度。
-+ 💄 优化typescript下，OverlayFigure中的attrs类型声明。
-
-
-## 9.4.0
-`2023-05-25`
-+ 🆕 实例api `createOverlay` 支持数组。
-+ 🆕 `overlay`新增属性`paneId`，`defaultZLevel`和`zLevel`。
-+ 🆕 `xAxis`新增方法`convertTimestampFromPixel`和`convertTimestampToPixel`。
-+ 💄 优化蜡烛柱显示。
-
-## 9.3.0
-`2023-05-13`
-+ 🆕 新增图表API `utils.calcTextWidth`。
-+ 🆕 图表API `createIndicator(value, isStack, options)`和`setPaneOptions(options)`新增`options.axisOptions`。
-+ 🆕 指标图形配置支持自定义。
-+ 💄 优化bar宽度比例。
-+ 💄 优化内部获取屏幕像素比。
-+ 💄 优化内部id生成。
-
-
-## 9.2.2
-`2023-05-04`
-+ 🐞 修复基础图形`line`事件检查可能导致错误问题。
-+ 💄 优化类型检查。
-
-
-## 9.2.1
-`2023-04-27`
-+ 💄 优化默认样式，`#EF5350`变更为`#F92855`，`#26A69A`变更为`#2DC08E`。
-+ 💄 优化typescript声明。
-
-## 9.2.0
-`2023-04-24`
-+ 🆕 实例API新增`getOffsetRightDistance`和`executeAction`。
-+ 🆕 实例API`applyNewData`、`applyMoreData`和`updateData`新增成功回调入参`callback`。
-+ 🆕 支持千分符显示。
-+ 🆕 样式配置新增`candle.bar.upBorderColor`、`candle.bar.downBorderColor`、`candle.bar.noChangeBorderColor`、`candle.bar.upWickColor`、`candle.bar.downWickColor`、`candle.bar.noChangeWickColor`、`candle.tooltip.rect.position`和`candle.tooltip.rect.offsetBottom`。
-+ 🆕 所有`visibleRange`新增`realFrom`和`realTo`。
-+ 💄 优化API，`klinecharts.utils.isValid`和`klinecharts.utils.formatBigNumber`。
-+ 💄 优化开发环境下，日志输出。
-
-## 9.1.3
-`2023-04-15`
-+ 🐞 修复图表api `applyNewData` 入参是空数组时不刷新问题。
-+ 🐞 修复无数据时y轴上十字光标文字不显示问题。
-+ 💄 优化面积图显示。
-+ 💄 优化覆盖物事件回调参数，新增`figureKey`和`figureIndex`。
-+ 💄 优化typescript覆盖物样式类型，和基础类型`DeepPartial`, `DeepRequired`。
-
-## 9.1.2
-`2023-04-10`
-+ 🐞 修复内置基础图形`line`触发事件不准确问题。
-+ 🐞 修复内置覆盖物`simpleAnnotation`和`simpleTag`绘制完成后第一次触发事件问题。
-+ 💄 优化覆盖物图形事件忽略，支持事件选择。
-
-## 9.1.1
-`2023-03-14`
-+ 🐞 修复内置基础图形`arc`不生效问题。
-+ 💄 优化渲染更新。
-
-## 9.1.0
-`2023-02-23`
-+ 🆕 图表实例方法`subscribeAction`和`unsubscribeAction`类型新增`onCandleBarClick`。
-+ 🆕 覆盖物支持双击强制结束绘制。
-+ 💄 优化事件处理。
-
-## 9.0.1
-`2023-02-17`
-+ 🐞 修复typescript引入问题。
-
-## 9.0.0
-`2023-02-16`
-+ 🛠 Typescript重构。
+## 10.0.0-alpha1
+`2024-12-01`
 + 🆕 新特性
-   + 新增Y轴方向缩放，滚动。
-   + API
-     + 新增基图表方法`registerFigure`，`getSupportFigures`，`getFigureClass`，`rigisterOverlay`，`getSupportOverlays`，`registerLocale`，`getSupportLocales`，`registerStyles`。
-     + 新增实例方法，`getSize`，`setLocale`，`getLocal`，`setCustomApi`，`getVisibleRange`，`createOverlay`，`getOverlayById`，`overrideOverlay`，`removeOverlay`。
-   + 样式配置
-     + 新增`candle.priceMark.last.text.borderStyle`，`candle.tooltip.icons`，`indicator.lastValueMark.text.borderStyle`，`indicator.tooltip.icons`，`crosshair.horizontal.text.borderStyle`，`crosshair.vertical.text.borderStyle`。
+  + 支持千分符，小数折叠自定义。
+  + 重写坐标轴模块，自定义y轴支持设置范围。
+  + 新增实例方法 `setPrecision(precision)` ， `getPrecision()` ， `setThousandsSeparator(thousandsSeparator)` ， `getThousandsSeparator()` ， `setDecimalFold(decimalFold)` ， `getDecimalFold()` 和 `setLoadMoreDataCallback(cb)` 。
 + 👉 变更
-   + API
-     + 图表方法`extension.addTechnicalIndicatorTemplate`变更为`registerIndicator`。
-     + 图表方法`extension.addShapeTemplate`变更为`registerOverlay`。
-     + 实例方法`setStyleOptions`变更为`setStyles`。
-     + 实例方法`getStyleOptions`变更为`getStyles`。
-     + 实例方法`setPaneOptions(options)`，`options`新增属性`gap`。
-     + 实例方法`setOffsetRightSpace`变更为`setOffsetRightDistance`。
-     + 实例方法`createTechnicalIndicator`变更为`createIndicator`。
-     + 实例方法`overlayTechnicalIndicator`变更为`overlayIndicator`。
-     + 实例方法`getTechnicalIndicatorByPaneId`变更为`getIndicatorByPaneId`。
-     + 实例方法`removeTechnicalIndicator`变更为`removeIndicator`。
-   + 样式配置
-     + 所有`line.style`选项变更为`solid`和`dashed`。
-     + 所有`dashValue`变更为`dashedValue`。
-     + `xAxis.height`变更为`xAxis.size`，`xAxis.tickText.paddingTop`变更为`xAxis.tickText.marginStart`，`xAxis.tickText.paddingBottom`变更为`xAxis.tickText.marginEnd`。
-     + `yAxis.height`变更为`yAxis.size`，`yAxis.tickText.paddingTop`变更为`yAxis.tickText.marginStart`，`yAxis.tickText.paddingBottom`变更为`yAxis.tickText.marginEnd`。
-     + `technicalIndicator.bar`变更为`indicator.bars`，`technicalIndicator.line`变更为`indicator.lines`，`technicalIndicator.circle`变更为`indicator.circles`。
-   + 自定义扩展
-      + 技术指标属性`calcParams`，变更为支持任意类型。
-      + 技术指标属性`plots`变更为`figures`。
-      + 技术指标属性`regeneratePlots`变更为`regeneratefigures`。
-      + 技术指标属性`calcTechnicalIndicator`变更为`calc`。
-      + 技术指标属性`render`变更为`draw`。
+  + 图表方法 `init(dcs, options)` ， `options.layout` 子项中的 `position` 变更为 `order` ， `options.customApi` 中的 `formatDate(dateTimeFormat, timestamp, format, type)` 变更为 `formatDate(timestamp, format, type)` ， `options.thousandsSeparator` 变更为对象 `{ sign, format }` ， `options.decimalFoldThreshold` 变更为 `options.decimalFold` 。
+  + 实例方法 `applyNewData(dataList, more, callback)` 变更为 `applyNewData(dataList, more)` 。
+  + 实例方法 `updateData(data, callback)` 变更为 `updateData(data)` 。
+  + 实例方法 `getBarSpace()` 返回值变更为对象。
+  + 自定义指标 `createTooltipDataSource` 方法返回值 `values` 变更为 `legends` 。
 + 🗑 废弃
-   + API
-      + 删除实例方法`getWidth`，`getHeight`，改用`getSize`。
-      + 删除实例方法`createShape`，`createAnnotation`，`createTag`，改用`createOverlay`。
-      + 删除实例方法`removeShape`，`removeAnnotation`，`removeTag`，改用`removeOverlay`。
-      + 删除实例方法`setShapeOptions`，改用`overrideOverlay`。
-      + 删除实例方法`createHtml`，`removeHtml`，`addTechnicalIndicatorTemplate`，`getTechnicalIndicatorTemplate`，`addShapeTemplate`。
-   + 样式配置
-      + 删除`shape`，`annotation`，`tag`，改用`overlay`。
-      + 删除`candle.margin`，`technicalIndicator.margin`。
-   + 自定义扩展
-      + 技术指标模版不再保存相关属性。
-      + 技术指标删除属性`shouldCheckParamCount`。
-      + 删除`Shape`，改用`Overlay`。
+  + 图表方法删除 `utils.drawArc(ctx, arc, styles)` ，`utils.drawCircle(ctx, circle, styles)` ， `utils.drawLine(ctx, line, styles)` ，`utils.drawPolygon(ctx, polygon, styles)` ， `utils.drawRect(ctx, rect, styles)` ，`utils.drawText(ctx, text, styles)` ， `utils.drawRectText(ctx, rectText, styles)`，请使用 `getFigureClass(name)` 代替。
+  + 实例方法删除 `setPriceVolumePrecision(pricePrecision, volumePrecision)` ，请使用 `setPrecision(precision)` 代替。
+  + 实例方法删除 `applyMoreData(dataList, more, callback)` ， `setLoadDataCallback(cb)` 和 `loadMore(cb)` ，请使用 `setLoadMoreDataCallback(cb)` 代替。
+  + 实例方法删除 `getIndicatorByPaneId(paneId, name)` ，请使用 `getIndicators(filter)` 代替。
+  + 实例方法删除 `getOverlayById(id)` ，请使用 `getOverlays(filter)` 代替。
+  + 样式配置删除 `yAxis.position` ， `yAxis.type` ， `yAxis.inside` 和 `yAxis.inside` ，请使用窗口配置 `axis` 中的属性代替。详情参阅图表API [init(dcs, options)](/api/chart/init#parameters) ，实例API [createIndicator(value, isStack, paneOptions)](/api/instance/createIndicator#parameters) 和 [setPaneOptions(options)](/api/instance/setPaneOptions#parameters) 。
+  + 样式配置删除 `overlay.rectText` 。
+  + 内置的基础图形删除 `rectText` ，请使用 `text` 代替。
+
+## 9.x
+
+去 [https://v9.klinecharts.com](https://v9.klinecharts.com) 上查看。
 
 
 ## 8.x
 
-去[Github](https://github.com/liihuu/KLineChart/blob/v8.6.3/docs/zh-CN/changelog.md)上查看 8.x 的 Change Log。
+去 [https://v8.klinecharts.com](https://v8.klinecharts.com) 上查看。
 
 
 ## 7.x
 
-去[Github](https://github.com/liihuu/KLineChart/blob/v7.5.0/docs/zh-CN/changelog.md)上查看 7.x 的 Change Log。
+去 [Github](https://github.com/liihuu/KLineChart/blob/v7.5.0/docs/zh-CN/changelog.md) 上查看 7.x 的 Change Log。
 
 ## 6.x
 
-去[Github](https://github.com/liihuu/KLineChart/blob/v6.1.0/docs/zh-CN/CHANGELOG.md)上查看 6.x 的 Change Log。
+去 [Github](https://github.com/liihuu/KLineChart/blob/v6.1.0/docs/zh-CN/CHANGELOG.md) 上查看 6.x 的 Change Log。
 
 ## 5.x
 
-去[Github](https://github.com/liihuu/KLineChart/releases/tag/v5.0.0)上查看 5.x 的版本记录。
+去 [Github](https://github.com/liihuu/KLineChart/releases/tag/v5.0.0) 上查看 5.x 的版本记录。
 
 ## 4.x
 
-去[Github](https://github.com/liihuu/KLineChart/releases/tag/v4.0.0)上查看 4.x 的版本记录。
+去 [Github](https://github.com/liihuu/KLineChart/releases/tag/v4.0.0) 上查看 4.x 的版本记录。

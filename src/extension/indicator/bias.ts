@@ -12,8 +12,8 @@
  * limitations under the License.
  */
 
-import KLineData from '../../common/KLineData'
-import { Indicator, IndicatorTemplate } from '../../component/Indicator'
+import type { KLineData } from '../../common/Data'
+import type { Indicator, IndicatorTemplate } from '../../component/Indicator'
 
 interface Bias {
   bias1?: number
@@ -34,13 +34,10 @@ const bias: IndicatorTemplate<Bias> = {
     { key: 'bias2', title: 'BIAS12: ', type: 'line' },
     { key: 'bias3', title: 'BIAS24: ', type: 'line' }
   ],
-  regenerateFigures: (params: any[]) => {
-    return params.map((p: number, i: number) => {
-      return { key: `bias${i + 1}`, title: `BIAS${p}: `, type: 'line' }
-    })
-  },
+  regenerateFigures: (params: unknown[]) => params.map((p: number, i: number) => ({ key: `bias${i + 1}`, title: `BIAS${p}: `, type: 'line' })),
   calc: (dataList: KLineData[], indicator: Indicator<Bias>) => {
-    const { calcParams: params, figures } = indicator
+    const { calcParams, figures } = indicator
+    const params = calcParams as number[]
     const closeSums: number[] = []
     return dataList.map((kLineData: KLineData, i: number) => {
       const bias: Bias = {}

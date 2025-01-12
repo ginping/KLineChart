@@ -12,21 +12,20 @@
  * limitations under the License.
  */
 
-import Nullable from '../../common/Nullable'
+import type Nullable from '../../common/Nullable'
 
-import FigureImp, { FigureTemplate, FigureConstructor, FigureInnerConstructor } from '../../component/Figure'
+import FigureImp, { type FigureTemplate, type FigureConstructor, type FigureInnerConstructor } from '../../component/Figure'
 
 import circle from './circle'
 import line from './line'
 import polygon from './polygon'
 import rect from './rect'
 import text from './text'
-import rectText from './rectText'
 import arc from './arc'
 
 const figures: Record<string, FigureInnerConstructor> = {}
 
-const extensions = [circle, line, polygon, rect, text, rectText, arc]
+const extensions = [circle, line, polygon, rect, text, arc]
 extensions.forEach((figure: FigureTemplate) => {
   figures[figure.name] = FigureImp.extend(figure)
 })
@@ -35,15 +34,15 @@ function getSupportedFigures (): string[] {
   return Object.keys(figures)
 }
 
-function registerFigure<A = any, S = any> (figure: FigureTemplate<A, S>): void {
+function registerFigure<A = unknown, S = unknown> (figure: FigureTemplate<A, S>): void {
   figures[figure.name] = FigureImp.extend(figure)
 }
 
-function getInnerFigureClass<A = any, S = any> (name: string): Nullable<FigureInnerConstructor<A, S>> {
+function getInnerFigureClass (name: string): Nullable<FigureInnerConstructor> {
   return figures[name] ?? null
 }
 
-function getFigureClass<A = any, S = any> (name: string): Nullable<FigureConstructor<A, S>> {
+function getFigureClass<A = unknown, S = unknown> (name: string): Nullable<FigureConstructor<A, S>> {
   return figures[name] ?? null
 }
 

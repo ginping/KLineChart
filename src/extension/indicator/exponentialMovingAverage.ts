@@ -12,8 +12,8 @@
  * limitations under the License.
  */
 
-import KLineData from '../../common/KLineData'
-import { Indicator, IndicatorTemplate, IndicatorSeries } from '../../component/Indicator'
+import type { KLineData } from '../../common/Data'
+import { type Indicator, type IndicatorTemplate, IndicatorSeries } from '../../component/Indicator'
 
 interface Ema {
   ema1?: number
@@ -36,11 +36,7 @@ const exponentialMovingAverage: IndicatorTemplate<Ema> = {
     { key: 'ema2', title: 'EMA12: ', type: 'line' },
     { key: 'ema3', title: 'EMA20: ', type: 'line' }
   ],
-  regenerateFigures: (params: any[]) => {
-    return params.map((p: number, i: number) => {
-      return { key: `ema${i + 1}`, title: `EMA${p}: `, type: 'line' }
-    })
-  },
+  regenerateFigures: (params: unknown[]) => params.map((p: number, i: number) => ({ key: `ema${i + 1}`, title: `EMA${p}: `, type: 'line' })),
   calc: (dataList: KLineData[], indicator: Indicator<Ema>) => {
     const { calcParams: params, figures } = indicator
     let closeSum = 0

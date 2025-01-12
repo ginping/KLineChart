@@ -12,21 +12,21 @@
  * limitations under the License.
  */
 
-import Coordinate from '../../common/Coordinate'
-import { TextStyle } from '../../common/Styles'
+import type Coordinate from '../../common/Coordinate'
+import type { TextStyle } from '../../common/Styles'
 
 import { createFont, calcTextWidth } from '../../common/utils/canvas'
 
-import { FigureTemplate } from '../../component/Figure'
+import type { FigureTemplate } from '../../component/Figure'
 
-import { RectAttrs, drawRect } from './rect'
+import { type RectAttrs, drawRect } from './rect'
 
 export function getTextRect (attrs: TextAttrs, styles: Partial<TextStyle>): RectAttrs {
   const { size = 12, paddingLeft = 0, paddingTop = 0, paddingRight = 0, paddingBottom = 0, weight = 'normal', family } = styles
   const { x, y, text, align = 'left', baseline = 'top', width: w, height: h } = attrs
   const width = w ?? (paddingLeft + calcTextWidth(text, size, weight, family) + paddingRight)
   const height = h ?? (paddingTop + size + paddingBottom)
-  let startX: number
+  let startX = 0
   switch (align) {
     case 'left':
     case 'start': {
@@ -43,7 +43,7 @@ export function getTextRect (attrs: TextAttrs, styles: Partial<TextStyle>): Rect
       break
     }
   }
-  let startY: number
+  let startY = 0
   switch (baseline) {
     case 'top':
     case 'hanging': {
@@ -64,18 +64,26 @@ export function getTextRect (attrs: TextAttrs, styles: Partial<TextStyle>): Rect
   return { x: startX, y: startY, width, height }
 }
 
-export function checkCoordinateOnText (coordinate: Coordinate, attrs: TextAttrs, styles: Partial<TextStyle>): boolean {
-  const { x, y, width, height } = getTextRect(attrs, styles)
-  return (
-    coordinate.x >= x &&
-    coordinate.x <= x + width &&
-    coordinate.y >= y &&
-    coordinate.y <= y + height
-  )
+export function checkCoordinateOnText (coordinate: Coordinate, attrs: TextAttrs | TextAttrs[], styles: Partial<TextStyle>): boolean {
+  let texts: TextAttrs[] = []
+  texts = texts.concat(attrs)
+  for (const text of texts) {
+    const { x, y, width, height } = getTextRect(text, styles)
+    if (
+      coordinate.x >= x &&
+      coordinate.x <= x + width &&
+      coordinate.y >= y &&
+      coordinate.y <= y + height
+    ) {
+      return true
+    }
+  }
+  return false
 }
 
-export function drawText (ctx: CanvasRenderingContext2D, attrs: TextAttrs, styles: Partial<TextStyle>): void {
-  const { text } = attrs
+export function drawText (ctx: CanvasRenderingContext2D, attrs: TextAttrs | TextAttrs[], styles: Partial<TextStyle>): void {
+  let texts: TextAttrs[] = []
+  texts = texts.concat(attrs)
   const {
     color = 'currentColor',
     size = 12,
@@ -85,15 +93,18 @@ export function drawText (ctx: CanvasRenderingContext2D, attrs: TextAttrs, style
     paddingTop = 0,
     paddingRight = 0
   } = styles
-  const rect = getTextRect(attrs, styles)
-
-  drawRect(ctx, rect, { ...styles, color: styles.backgroundColor })
+  const rects = texts.map(text => getTextRect(text, styles))
+  drawRect(ctx, rects, { ...styles, color: styles.backgroundColor })
 
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
   ctx.font = createFont(size, weight, family)
   ctx.fillStyle = color
-  ctx.fillText(text, rect.x + paddingLeft, rect.y + paddingTop, rect.width - paddingLeft - paddingRight)
+
+  texts.forEach((text, index) => {
+    const rect = rects[index]
+    ctx.fillText(text.text, rect.x + paddingLeft, rect.y + paddingTop, rect.width - paddingLeft - paddingRight)
+  })
 }
 
 export interface TextAttrs {
@@ -106,12 +117,10 @@ export interface TextAttrs {
   baseline?: CanvasTextBaseline
 }
 
-const text: FigureTemplate<TextAttrs, Partial<TextStyle>> = {
+const text: FigureTemplate<TextAttrs | TextAttrs[], Partial<TextStyle>> = {
   name: 'text',
-  checkEventOn: (coordinate: Coordinate, attrs: TextAttrs, styles: Partial<TextStyle>) => {
-    return checkCoordinateOnText(coordinate, attrs, styles)
-  },
-  draw: (ctx: CanvasRenderingContext2D, attrs: TextAttrs, styles: Partial<TextStyle>) => {
+  checkEventOn: checkCoordinateOnText,
+  draw: (ctx: CanvasRenderingContext2D, attrs: TextAttrs | TextAttrs[], styles: Partial<TextStyle>) => {
     drawText(ctx, attrs, styles)
   }
 }

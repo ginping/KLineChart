@@ -12,11 +12,11 @@
  * limitations under the License.
  */
 
-import KLineData from '../../common/KLineData'
-import { IndicatorStyle, PolygonType } from '../../common/Styles'
+import type { KLineData } from '../../common/Data'
+import { PolygonType } from '../../common/Styles'
 import { formatValue } from '../../common/utils/format'
 
-import { Indicator, IndicatorTemplate, IndicatorFigureStylesCallbackData } from '../../component/Indicator'
+import type { Indicator, IndicatorTemplate } from '../../component/Indicator'
 
 interface Ao {
   ao?: number
@@ -31,22 +31,22 @@ const awesomeOscillator: IndicatorTemplate<Ao> = {
     title: 'AO: ',
     type: 'bar',
     baseValue: 0,
-    styles: (data: IndicatorFigureStylesCallbackData<Ao>, indicator: Indicator<Ao>, defaultStyles: IndicatorStyle) => {
+    styles: ({ data, indicator, defaultStyles }) => {
       const { prev, current } = data
-      const prevAo = prev.indicatorData?.ao ?? Number.MIN_SAFE_INTEGER
-      const currentAo = current.indicatorData?.ao ?? Number.MIN_SAFE_INTEGER
-      let color: string
+      const prevAo = prev?.ao ?? Number.MIN_SAFE_INTEGER
+      const currentAo = current?.ao ?? Number.MIN_SAFE_INTEGER
+      let color = ''
       if (currentAo > prevAo) {
-        color = formatValue(indicator.styles, 'bars[0].upColor', (defaultStyles.bars)[0].upColor) as string
+        color = formatValue(indicator.styles, 'bars[0].upColor', (defaultStyles!.bars)[0].upColor) as string
       } else {
-        color = formatValue(indicator.styles, 'bars[0].downColor', (defaultStyles.bars)[0].downColor) as string
+        color = formatValue(indicator.styles, 'bars[0].downColor', (defaultStyles!.bars)[0].downColor) as string
       }
       const style = currentAo > prevAo ? PolygonType.Stroke : PolygonType.Fill
       return { color, style, borderColor: color }
     }
   }],
   calc: (dataList: KLineData[], indicator: Indicator<Ao>) => {
-    const params = indicator.calcParams
+    const params = indicator.calcParams as number[]
     const maxPeriod = Math.max(params[0], params[1])
     let shortSum = 0
     let longSum = 0

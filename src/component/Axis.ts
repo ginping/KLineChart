@@ -12,9 +12,12 @@
  * limitations under the License.
  */
 
-import DrawPane from '../pane/DrawPane'
+import type VisibleRange from '../common/VisibleRange'
 
-import { getPrecision, nice, round } from '../common/utils/number'
+import type DrawPane from '../pane/DrawPane'
+
+import type Bounding from '../common/Bounding'
+import type { Chart } from '../Chart'
 
 export interface AxisTick {
   coord: number
@@ -22,42 +25,116 @@ export interface AxisTick {
   text: string
 }
 
-export interface AxisExtremum {
-  min: number
-  max: number
-  range: number
-  realMin: number
-  realMax: number
-  realRange: number
+export interface AxisRange extends VisibleRange {
+  readonly range: number
+  readonly realRange: number
+  readonly displayFrom: number
+  readonly displayTo: number
+  readonly displayRange: number
+}
+
+export interface AxisGap {
+  top?: number
+  bottom?: number
+}
+
+export enum AxisPosition {
+  Left = 'left',
+  Right = 'right'
+}
+
+export interface AxisValueToValueParams {
+  range: AxisRange
+}
+
+export type AxisValueToValueCallback = (value: number, params: AxisValueToValueParams) => number
+
+export interface AxisCreateRangeParams {
+  chart: Chart
+  paneId: string
+  defaultRange: AxisRange
+}
+
+export type AxisCreateRangeCallback = (params: AxisCreateRangeParams) => AxisRange
+
+export interface AxisCreateTicksParams {
+  range: AxisRange
+  bounding: Bounding
+  defaultTicks: AxisTick[]
+}
+
+export type AxisCreateTicksCallback = (params: AxisCreateTicksParams) => AxisTick[]
+
+export type AxisMinSpanCallback = (value: number) => number
+
+export interface AxisTemplate {
+  name: string
+  reverse?: boolean
+  inside?: boolean
+  position?: AxisPosition
+  scrollZoomEnabled?: boolean
+  gap?: AxisGap
+  valueToRealValue?: AxisValueToValueCallback
+  realValueToDisplayValue?: AxisValueToValueCallback
+  displayValueToRealValue?: AxisValueToValueCallback
+  realValueToValue?: AxisValueToValueCallback
+  displayValueToText?: (value: number, precision: number) => string
+  minSpan?: AxisMinSpanCallback
+  createRange?: AxisCreateRangeCallback
+  createTicks?: AxisCreateTicksCallback
 }
 
 export interface Axis {
+  override: (axis: AxisTemplate) => void
+  getTicks: () => AxisTick[]
+  getRange: () => AxisRange
+  getAutoSize: () => number
   convertToPixel: (value: number) => number
   convertFromPixel: (px: number) => number
 }
 
-export default abstract class AxisImp {
-  private readonly _parent: DrawPane<AxisImp>
+export type AxisCreate = Omit<AxisTemplate, 'displayValueToText' | 'valueToRealValue' | 'realValueToDisplayValue' | 'displayValueToRealValue' | 'realValueToValue'>
 
-  private _extremum: AxisExtremum = { min: 0, max: 0, range: 0, realMin: 0, realMax: 0, realRange: 0 }
-  private _prevExtremum: AxisExtremum = { min: 0, max: 0, range: 0, realMin: 0, realMax: 0, realRange: 0 }
+function getDefaultAxisRange (): AxisRange {
+  return {
+    from: 0,
+    to: 0,
+    range: 0,
+    realFrom: 0,
+    realTo: 0,
+    realRange: 0,
+    displayFrom: 0,
+    displayTo: 0,
+    displayRange: 0
+  }
+}
+
+export default abstract class AxisImp implements Axis {
+  name: string
+  scrollZoomEnabled = true
+  createTicks: AxisCreateTicksCallback
+
+  private readonly _parent: DrawPane
+
+  private _range = getDefaultAxisRange()
+  private _prevRange = getDefaultAxisRange()
   private _ticks: AxisTick[] = []
 
   private _autoCalcTickFlag = true
 
-  constructor (parent: DrawPane<AxisImp>) {
+  constructor (parent: DrawPane) {
     this._parent = parent
   }
 
-  getParent (): DrawPane<AxisImp> { return this._parent }
+  getParent (): DrawPane { return this._parent }
 
   buildTicks (force: boolean): boolean {
     if (this._autoCalcTickFlag) {
-      this._extremum = this.calcExtremum()
+      this._range = this.createRangeImp()
     }
-    if (this._prevExtremum.min !== this._extremum.min || this._prevExtremum.max !== this._extremum.max || force) {
-      this._prevExtremum = this._extremum
-      this._ticks = this.optimalTicks(this._calcTicks())
+    if (this._prevRange.from !== this._range.from || this._prevRange.to !== this._range.to || force) {
+      this._prevRange = this._range
+      this._ticks = this.createTicksImp()
       return true
     }
     return false
@@ -67,16 +144,12 @@ export default abstract class AxisImp {
     return this._ticks
   }
 
-  getScrollZoomEnabled (): boolean {
-    return this.getParent().getOptions().axisOptions.scrollZoomEnabled ?? true
-  }
-
-  setExtremum (extremum: AxisExtremum): void {
+  setRange (range: AxisRange): void {
     this._autoCalcTickFlag = false
-    this._extremum = extremum
+    this._range = range
   }
 
-  getExtremum (): AxisExtremum { return this._extremum }
+  getRange (): AxisRange { return this._range }
 
   setAutoCalcTickFlag (flag: boolean): void {
     this._autoCalcTickFlag = flag
@@ -84,38 +157,13 @@ export default abstract class AxisImp {
 
   getAutoCalcTickFlag (): boolean { return this._autoCalcTickFlag }
 
-  private _calcTicks (): AxisTick[] {
-    const { realMin, realMax, realRange } = this._extremum
-    const ticks: AxisTick[] = []
+  protected abstract createRangeImp (): AxisRange
 
-    if (realRange >= 0) {
-      const [interval, precision] = this._calcTickInterval(realRange)
-      const first = round(Math.ceil(realMin / interval) * interval, precision)
-      const last = round(Math.floor(realMax / interval) * interval, precision)
-      let n = 0
-      let f = first
+  protected abstract createTicksImp (): AxisTick[]
 
-      if (interval !== 0) {
-        while (f <= last) {
-          const v = f.toFixed(precision)
-          ticks[n] = { text: v, coord: 0, value: v }
-          ++n
-          f += interval
-        }
-      }
-    }
-    return ticks
-  }
+  protected abstract getBounding (): Bounding
 
-  private _calcTickInterval (range: number): number[] {
-    const interval = nice(range / 8.0)
-    const precision = getPrecision(interval)
-    return [interval, precision]
-  }
-
-  protected abstract calcExtremum (): AxisExtremum
-
-  protected abstract optimalTicks (ticks: AxisTick[]): AxisTick[]
+  abstract override (axis: AxisTemplate): void
 
   abstract getAutoSize (): number
 

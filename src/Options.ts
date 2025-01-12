@@ -12,12 +12,11 @@
  * limitations under the License.
  */
 
-import DeepPartial from './common/DeepPartial'
-import { Styles } from './common/Styles'
-import { formatDate, formatBigNumber } from './common/utils/format'
+import type DeepPartial from './common/DeepPartial'
+import type { Styles } from './common/Styles'
 
-import { IndicatorCreate } from './component/Indicator'
-import { PaneOptions } from './pane/types'
+import type { IndicatorCreate } from './component/Indicator'
+import type { PaneOptions } from './pane/types'
 
 export enum FormatDateType {
   Tooltip,
@@ -25,7 +24,7 @@ export enum FormatDateType {
   XAxis
 }
 
-export type FormatDate = (dateTimeFormat: Intl.DateTimeFormat, timestamp: number, format: string, type: FormatDateType) => string
+export type FormatDate = (timestamp: number, format: string, type: FormatDateType) => string
 
 export type FormatBigNumber = (value: string | number) => string
 
@@ -33,15 +32,6 @@ export interface CustomApi {
   formatDate: FormatDate
   formatBigNumber: FormatBigNumber
 }
-
-export function getDefaultCustomApi (): CustomApi {
-  return {
-    formatDate,
-    formatBigNumber
-  }
-}
-
-export const defaultLocale = 'en-US'
 
 export interface Locales {
   time: string
@@ -67,11 +57,22 @@ export interface LayoutChild {
   options?: PaneOptions
 }
 
+export interface DecimalFold {
+  threshold: number
+  format: (value: string | number) => string
+}
+
+export interface ThousandsSeparator {
+  sign: string
+  format: (value: string | number) => string
+}
+
 export interface Options {
-  layout?: LayoutChild[]
   locale?: string
   timezone?: string
   styles?: string | DeepPartial<Styles>
   customApi?: Partial<CustomApi>
-  thousandsSeparator?: string
+  thousandsSeparator?: Partial<ThousandsSeparator>
+  decimalFold?: Partial<DecimalFold>
+  layout?: LayoutChild[]
 }

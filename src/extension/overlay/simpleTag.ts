@@ -14,7 +14,7 @@
 
 import { formatPrecision } from '../../common/utils/format'
 
-import { OverlayTemplate } from '../../component/Overlay'
+import type { OverlayTemplate } from '../../component/Overlay'
 
 import { isFunction, isNumber, isValid } from '../../common/utils/typeChecks'
 
@@ -26,22 +26,20 @@ const simpleTag: OverlayTemplate = {
   styles: {
     line: { style: LineType.Dashed }
   },
-  createPointFigures: ({ bounding, coordinates }) => {
-    return {
-      type: 'line',
-      attrs: {
-        coordinates: [
-          { x: 0, y: coordinates[0].y },
-          { x: bounding.width, y: coordinates[0].y }
-        ]
-      },
-      ignoreEvent: true
-    }
-  },
-  createYAxisFigures: ({ overlay, coordinates, bounding, yAxis, precision }) => {
+  createPointFigures: ({ bounding, coordinates }) => ({
+    type: 'line',
+    attrs: {
+      coordinates: [
+        { x: 0, y: coordinates[0].y },
+        { x: bounding.width, y: coordinates[0].y }
+      ]
+    },
+    ignoreEvent: true
+  }),
+  createYAxisFigures: ({ chart, overlay, coordinates, bounding, yAxis }) => {
     const isFromZero = yAxis?.isFromZero() ?? false
-    let textAlign: CanvasTextAlign
-    let x: number
+    let textAlign: CanvasTextAlign = 'left'
+    let x = 0
     if (isFromZero) {
       textAlign = 'left'
       x = 0
@@ -49,18 +47,18 @@ const simpleTag: OverlayTemplate = {
       textAlign = 'right'
       x = bounding.width
     }
-    let text
+    let text = ''
     if (isValid(overlay.extendData)) {
       if (!isFunction(overlay.extendData)) {
-        text = overlay.extendData ?? ''
+        text = (overlay.extendData ?? '') as string
       } else {
-        text = overlay.extendData(overlay)
+        text = overlay.extendData(overlay) as string
       }
     }
     if (!isValid(text) && isNumber(overlay.points[0].value)) {
-      text = formatPrecision(overlay.points[0].value, precision.price)
+      text = formatPrecision(overlay.points[0].value, chart.getPrecision().price)
     }
-    return { type: 'text', attrs: { x, y: coordinates[0].y, text: text ?? '', align: textAlign, baseline: 'middle' } }
+    return { type: 'text', attrs: { x, y: coordinates[0].y, text, align: textAlign, baseline: 'middle' } }
   }
 }
 
