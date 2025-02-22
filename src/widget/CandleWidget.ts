@@ -19,14 +19,14 @@ import CandleAreaView from '../view/CandleAreaView'
 import CandleHighLowPriceView from '../view/CandleHighLowPriceView'
 import CandleLastPriceLineView from '../view/CandleLastPriceLineView'
 
-import IndicatorTooltipView from '../view/IndicatorTooltipView'
+import type IndicatorTooltipView from '../view/IndicatorTooltipView'
 import CandleTooltipView from '../view/CandleTooltipView'
 
 import { CandleType } from '../common/Styles'
 
-import AxisPane from '../pane/DrawPane'
+import type AxisPane from '../pane/DrawPane'
 
-import YAxis from '../component/YAxis'
+import type { YAxis } from '../component/YAxis'
 
 export default class CandleWidget extends IndicatorWidget {
   private readonly _candleBarView = new CandleBarView(this)
@@ -44,6 +44,7 @@ export default class CandleWidget extends IndicatorWidget {
     if (candleStyles.type !== CandleType.Area) {
       this._candleBarView.draw(ctx)
       this._candleHighLowPriceView.draw(ctx)
+      this._candleAreaView.stopAnimation()
     } else {
       this._candleAreaView.draw(ctx)
     }

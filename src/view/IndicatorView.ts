@@ -12,36 +12,35 @@
  * limitations under the License.
  */
 
-import Nullable from '../common/Nullable'
-import VisibleData from '../common/VisibleData'
-import BarSpace from '../common/BarSpace'
-import { CandleType } from '../common/Styles'
-
-import ChartStore from '../store/ChartStore'
-
-import { eachFigures, IndicatorFigure, IndicatorFigureAttrs, IndicatorFigureStyle } from '../component/Indicator'
-
-import CandleBarView, { CandleBarOptions } from './CandleBarView'
-
+import type Nullable from '../common/Nullable'
+import { type CandleColorCompareRule, CandleType, type SmoothLineStyle } from '../common/Styles'
 import { formatValue } from '../common/utils/format'
 import { isNumber, isValid } from '../common/utils/typeChecks'
+import type Coordinate from '../common/Coordinate'
+
+import { eachFigures, type IndicatorFigure, type IndicatorFigureAttrs, type IndicatorFigureStyle } from '../component/Indicator'
+
+import CandleBarView, { type CandleBarOptions } from './CandleBarView'
 
 export default class IndicatorView extends CandleBarView {
-  override getCandleBarOptions (chartStore: ChartStore): Nullable<CandleBarOptions> {
+  override getCandleBarOptions (): Nullable<CandleBarOptions> {
     const pane = this.getWidget().getPane()
     const yAxis = pane.getAxisComponent()
     if (!yAxis.isInCandle()) {
-      const indicators = chartStore.getIndicatorStore().getInstances(pane.getId())
+      const chartStore = pane.getChart().getChartStore()
+      const indicators = chartStore.getIndicatorsByPaneId(pane.getId())
       for (const indicator of indicators) {
         if (indicator.shouldOhlc && indicator.visible) {
           const indicatorStyles = indicator.styles
           const defaultStyles = chartStore.getStyles().indicator
+          const compareRule = formatValue(indicatorStyles, 'ohlc.compareRule', defaultStyles.ohlc.compareRule) as CandleColorCompareRule
           const upColor = formatValue(indicatorStyles, 'ohlc.upColor', defaultStyles.ohlc.upColor) as string
           const downColor = formatValue(indicatorStyles, 'ohlc.downColor', defaultStyles.ohlc.downColor) as string
           const noChangeColor = formatValue(indicatorStyles, 'ohlc.noChangeColor', defaultStyles.ohlc.noChangeColor) as string
           return {
             type: CandleType.Ohlc,
             styles: {
+              compareRule,
               upColor,
               downColor,
               noChangeColor,
@@ -68,10 +67,7 @@ export default class IndicatorView extends CandleBarView {
     const xAxis = chart.getXAxisPane().getAxisComponent()
     const yAxis = pane.getAxisComponent()
     const chartStore = chart.getChartStore()
-    const dataList = chartStore.getDataList()
-    const timeScaleStore = chartStore.getTimeScaleStore()
-    const visibleRange = timeScaleStore.getVisibleRange()
-    const indicators = chartStore.getIndicatorStore().getInstances(pane.getId())
+    const indicators = chartStore.getIndicatorsByPaneId(pane.getId())
     const defaultStyles = chartStore.getStyles().indicator
     ctx.save()
     indicators.forEach(indicator => {
@@ -86,40 +82,52 @@ export default class IndicatorView extends CandleBarView {
           ctx.save()
           isCover = indicator.draw({
             ctx,
-            kLineDataList: dataList,
+            chart,
             indicator,
-            visibleRange,
             bounding,
-            barSpace: timeScaleStore.getBarSpace(),
-            defaultStyles,
             xAxis,
             yAxis
-          }) ?? false
+          })
           ctx.restore()
         }
         if (!isCover) {
           const result = indicator.result
+          const lines: Array<Array<{ coordinates: Coordinate[], styles: Partial<SmoothLineStyle> }>> = []
 
-          this.eachChildren((data: VisibleData, barSpace: BarSpace) => {
-            const { halfGapBar, gapBar } = barSpace
+          this.eachChildren((data, barSpace) => {
+            const { halfGapBar } = barSpace
             const { dataIndex, x } = data
             const prevX = xAxis.convertToPixel(dataIndex - 1)
             const nextX = xAxis.convertToPixel(dataIndex + 1)
-            const prevIndicatorData = result[dataIndex - 1] ?? {}
-            const currentIndicatorData = result[dataIndex] ?? {}
-            const nextIndicatorData = result[dataIndex + 1] ?? {}
+            const prevData = result[dataIndex - 1] ?? null
+            const currentData = result[dataIndex] ?? null
+            const nextData = result[dataIndex + 1] ?? null
             const prevCoordinate = { x: prevX }
             const currentCoordinate = { x }
             const nextCoordinate = { x: nextX }
             indicator.figures.forEach(({ key }) => {
-              prevCoordinate[key] = yAxis.convertToPixel(prevIndicatorData[key])
-              currentCoordinate[key] = yAxis.convertToPixel(currentIndicatorData[key])
-              nextCoordinate[key] = yAxis.convertToPixel(nextIndicatorData[key])
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ignore
+              const prevValue = prevData?.[key]
+              if (isNumber(prevValue)) {
+                prevCoordinate[key] = yAxis.convertToPixel(prevValue)
+              }
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ignore
+              const currentValue = currentData?.[key]
+              if (isNumber(currentValue)) {
+                currentCoordinate[key] = yAxis.convertToPixel(currentValue)
+              }
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ignore
+              const nextValue = nextData?.[key]
+              if (isNumber(nextValue)) {
+                nextCoordinate[key] = yAxis.convertToPixel(nextValue)
+              }
             })
-            eachFigures(dataList, indicator, dataIndex, defaultStyles, (figure: IndicatorFigure, figureStyles: IndicatorFigureStyle) => {
-              if (isValid(currentIndicatorData[figure.key])) {
+            eachFigures(indicator, dataIndex, defaultStyles, (figure: IndicatorFigure, figureStyles: IndicatorFigureStyle, figureIndex: number) => {
+              if (isValid(currentData?.[figure.key])) {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ignore
                 const valueY = currentCoordinate[figure.key]
                 let attrs = figure.attrs?.({
+                  data: { prev: prevData, current: currentData, next: nextData },
                   coordinate: { prev: prevCoordinate, current: currentCoordinate, next: nextCoordinate },
                   bounding,
                   barSpace,
@@ -129,51 +137,104 @@ export default class IndicatorView extends CandleBarView {
                 if (!isValid<IndicatorFigureAttrs>(attrs)) {
                   switch (figure.type) {
                     case 'circle': {
-                      attrs = { x, y: valueY, r: halfGapBar }
+                      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ignore
+                      attrs = { x, y: valueY, r: Math.max(1, halfGapBar) }
                       break
                     }
                     case 'rect':
                     case 'bar': {
-                      const baseValue = figure.baseValue ?? yAxis.getExtremum().min
+                      const baseValue = figure.baseValue ?? yAxis.getRange().from
                       const baseValueY = yAxis.convertToPixel(baseValue)
                       let height = Math.abs(baseValueY - (valueY as number))
-                      if (baseValue !== currentIndicatorData[figure.key]) {
+                      if (baseValue !== currentData?.[figure.key]) {
                         height = Math.max(1, height)
                       }
-                      let y: number
+                      let y = 0
                       if (valueY > baseValueY) {
                         y = baseValueY
                       } else {
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ignore
                         y = valueY
                       }
                       attrs = {
                         x: x - halfGapBar,
                         y,
-                        width: gapBar,
+                        width: Math.max(1, halfGapBar * 2),
                         height
                       }
                       break
                     }
                     case 'line': {
+                      if (!isValid(lines[figureIndex])) {
+                        lines[figureIndex] = []
+                      }
                       if (isNumber(currentCoordinate[figure.key]) && isNumber(nextCoordinate[figure.key])) {
-                        attrs = {
+                        lines[figureIndex].push({
                           coordinates: [
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ignore
                             { x: currentCoordinate.x, y: currentCoordinate[figure.key] },
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ignore
                             { x: nextCoordinate.x, y: nextCoordinate[figure.key] }
-                          ]
-                        }
+                          ],
+                          styles: figureStyles as unknown as SmoothLineStyle
+                        })
                       }
                       break
                     }
                     default: { break }
                   }
                 }
-                if (isValid<IndicatorFigureAttrs>(attrs)) {
-                  const name = figure.type as string
-                  this.createFigure(name === 'bar' ? 'rect' : name, attrs, figureStyles)?.draw(ctx)
+                const type = figure.type!
+                if (isValid<IndicatorFigureAttrs>(attrs) && type !== 'line') {
+                  this.createFigure({
+                    name: type === 'bar' ? 'rect' : type,
+                    attrs,
+                    styles: figureStyles
+                  })?.draw(ctx)
                 }
               }
             })
+          })
+
+          // merge line and render
+          lines.forEach(items => {
+            if (items.length > 1) {
+              const mergeLines = [
+                {
+                  coordinates: [items[0].coordinates[0], items[0].coordinates[1]],
+                  styles: items[0].styles
+                }
+              ]
+              for (let i = 1; i < items.length; i++) {
+                const lastMergeLine = mergeLines[mergeLines.length - 1]
+                const current = items[i]
+                const lastMergeLineLastCoordinate = lastMergeLine.coordinates[lastMergeLine.coordinates.length - 1]
+                if (
+                  lastMergeLineLastCoordinate.x === current.coordinates[0].x &&
+                  lastMergeLineLastCoordinate.y === current.coordinates[0].y &&
+                  lastMergeLine.styles.style === current.styles.style &&
+                  lastMergeLine.styles.color === current.styles.color &&
+                  lastMergeLine.styles.size === current.styles.size &&
+                  lastMergeLine.styles.smooth === current.styles.smooth &&
+                  lastMergeLine.styles.dashedValue?.[0] === current.styles.dashedValue?.[0] &&
+                  lastMergeLine.styles.dashedValue?.[1] === current.styles.dashedValue?.[1]
+                ) {
+                  lastMergeLine.coordinates.push(current.coordinates[1])
+                } else {
+                  mergeLines.push({
+                    coordinates: [current.coordinates[0], current.coordinates[1]],
+                    styles: current.styles
+                  })
+                }
+              }
+              mergeLines.forEach(({ coordinates, styles }) => {
+                this.createFigure({
+                  name: 'line',
+                  attrs: { coordinates },
+                  styles
+                })?.draw(ctx)
+              })
+            }
           })
         }
       }

@@ -12,20 +12,42 @@
  * limitations under the License.
  */
 
-import KLineData from '../../common/KLineData'
-import { IndicatorStyle } from '../../common/Styles'
 import { formatValue } from '../../common/utils/format'
+import { isValid } from '../../common/utils/typeChecks'
 
-import { Indicator, IndicatorTemplate, IndicatorFigureStylesCallbackData, IndicatorSeries, IndicatorFigure } from '../../component/Indicator'
+import { type IndicatorTemplate, IndicatorSeries, type IndicatorFigure } from '../../component/Indicator'
 
 interface Vol {
+  open: number
+  close: number
   volume?: number
   ma1?: number
   ma2?: number
   ma3?: number
 }
 
-const volume: IndicatorTemplate<Vol> = {
+function getVolumeFigure (): IndicatorFigure<Vol> {
+  return {
+    key: 'volume',
+    title: 'VOLUME: ',
+    type: 'bar',
+    baseValue: 0,
+    styles: ({ data, indicator, defaultStyles }) => {
+      const current = data.current
+      let color = formatValue(indicator.styles, 'bars[0].noChangeColor', (defaultStyles!.bars)[0].noChangeColor)
+      if (isValid(current)) {
+        if (current.close > current.open) {
+          color = formatValue(indicator.styles, 'bars[0].upColor', (defaultStyles!.bars)[0].upColor)
+        } else if (current.close < current.open) {
+          color = formatValue(indicator.styles, 'bars[0].downColor', (defaultStyles!.bars)[0].downColor)
+        }
+      }
+      return { color: color as string }
+    }
+  }
+}
+
+const volume: IndicatorTemplate<Vol, number> = {
   name: 'VOL',
   shortName: 'VOL',
   series: IndicatorSeries.Volume,
@@ -37,55 +59,19 @@ const volume: IndicatorTemplate<Vol> = {
     { key: 'ma1', title: 'MA5: ', type: 'line' },
     { key: 'ma2', title: 'MA10: ', type: 'line' },
     { key: 'ma3', title: 'MA20: ', type: 'line' },
-    {
-      key: 'volume',
-      title: 'VOLUME: ',
-      type: 'bar',
-      baseValue: 0,
-      styles: (data: IndicatorFigureStylesCallbackData<Vol>, indicator: Indicator, defaultStyles: IndicatorStyle) => {
-        const kLineData = data.current.kLineData as KLineData
-        let color: string
-        if (kLineData.close > kLineData.open) {
-          color = formatValue(indicator.styles, 'bars[0].upColor', (defaultStyles.bars)[0].upColor) as string
-        } else if (kLineData.close < kLineData.open) {
-          color = formatValue(indicator.styles, 'bars[0].downColor', (defaultStyles.bars)[0].downColor) as string
-        } else {
-          color = formatValue(indicator.styles, 'bars[0].noChangeColor', (defaultStyles.bars)[0].noChangeColor) as string
-        }
-        return { color }
-      }
-    }
+    getVolumeFigure()
   ],
-  regenerateFigures: (params: any[]) => {
-    const figures: Array<IndicatorFigure<Vol>> = params.map((p: number, i: number) => {
-      return { key: `ma${i + 1}`, title: `MA${p}: `, type: 'line' }
-    })
-    figures.push({
-      key: 'volume',
-      title: 'VOLUME: ',
-      type: 'bar',
-      baseValue: 0,
-      styles: (data: IndicatorFigureStylesCallbackData<Vol>, indicator: Indicator, defaultStyles: IndicatorStyle) => {
-        const kLineData = data.current.kLineData as KLineData
-        let color: string
-        if (kLineData.close > kLineData.open) {
-          color = formatValue(indicator.styles, 'bars[0].upColor', (defaultStyles.bars)[0].upColor) as string
-        } else if (kLineData.close < kLineData.open) {
-          color = formatValue(indicator.styles, 'bars[0].downColor', (defaultStyles.bars)[0].downColor) as string
-        } else {
-          color = formatValue(indicator.styles, 'bars[0].noChangeColor', (defaultStyles.bars)[0].noChangeColor) as string
-        }
-        return { color }
-      }
-    })
+  regenerateFigures: (params) => {
+    const figures: Array<IndicatorFigure<Vol>> = params.map((p, i) => ({ key: `ma${i + 1}`, title: `MA${p}: `, type: 'line' }))
+    figures.push(getVolumeFigure())
     return figures
   },
-  calc: (dataList: KLineData[], indicator: Indicator<Vol>) => {
+  calc: (dataList, indicator) => {
     const { calcParams: params, figures } = indicator
     const volSums: number[] = []
-    return dataList.map((kLineData: KLineData, i: number) => {
+    return dataList.map((kLineData, i) => {
       const volume = kLineData.volume ?? 0
-      const vol: Vol = { volume }
+      const vol: Vol = { volume, open: kLineData.open, close: kLineData.close }
       params.forEach((p, index) => {
         volSums[index] = (volSums[index] ?? 0) + volume
         if (i >= p - 1) {

@@ -12,14 +12,14 @@
  * limitations under the License.
  */
 
-import Bounding from '../common/Bounding'
-import { AxisStyle, Styles } from '../common/Styles'
+import type Bounding from '../common/Bounding'
+import type { AxisStyle, Styles } from '../common/Styles'
 
-import { LineAttrs } from '../extension/figure/line'
-import { TextAttrs } from '../extension/figure/text'
+import type { LineAttrs } from '../extension/figure/line'
+import type { TextAttrs } from '../extension/figure/text'
 
-import { AxisTick } from '../component/Axis'
-import YAxis from '../component/YAxis'
+import type { AxisTick } from '../component/Axis'
+import type { YAxis } from '../component/YAxis'
 
 import AxisView from './AxisView'
 
@@ -31,9 +31,9 @@ export default class YAxisView extends AxisView<YAxis> {
   override createAxisLine (bounding: Bounding, styles: AxisStyle): LineAttrs {
     const yAxis = this.getWidget().getPane().getAxisComponent()
     const size = styles.axisLine.size
-    let x: number
+    let x = 0
     if (yAxis.isFromZero()) {
-      x = size / 2
+      x = 0
     } else {
       x = bounding.width - size
     }

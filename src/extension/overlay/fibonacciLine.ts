@@ -12,13 +12,12 @@
  * limitations under the License.
  */
 
-import { formatThousands } from '../../common/utils/format'
 import { isNumber } from '../../common/utils/typeChecks'
 
-import { OverlayTemplate } from '../../component/Overlay'
+import type { OverlayTemplate } from '../../component/Overlay'
 
-import { LineAttrs } from '../figure/line'
-import { TextAttrs } from '../figure/text'
+import type { LineAttrs } from '../figure/line'
+import type { TextAttrs } from '../figure/text'
 
 const fibonacciLine: OverlayTemplate = {
   name: 'fibonacciLine',
@@ -26,9 +25,19 @@ const fibonacciLine: OverlayTemplate = {
   needDefaultPointFigure: true,
   needDefaultXAxisFigure: true,
   needDefaultYAxisFigure: true,
-  createPointFigures: ({ coordinates, bounding, overlay, precision, thousandsSeparator }) => {
+  createPointFigures: ({ chart, coordinates, bounding, overlay, yAxis }) => {
     const points = overlay.points
+
     if (coordinates.length > 0) {
+      let precision = 0
+      if (yAxis?.isInCandle() ?? true) {
+        precision = chart.getPrecision().price
+      } else {
+        const indicators = chart.getIndicators({ paneId: overlay.paneId })
+        indicators.forEach(indicator => {
+          precision = Math.max(precision, indicator.precision)
+        })
+      }
       const lines: LineAttrs[] = []
       const texts: TextAttrs[] = []
       const startX = 0
@@ -39,7 +48,7 @@ const fibonacciLine: OverlayTemplate = {
         const valueDif = points[0].value - points[1].value
         percents.forEach(percent => {
           const y = coordinates[1].y + yDif * percent
-          const value = formatThousands(((points[1].value ?? 0) + valueDif * percent).toFixed(precision.price), thousandsSeparator)
+          const value = chart.getDecimalFold().format(chart.getThousandsSeparator().format(((points[1].value ?? 0) + valueDif * percent).toFixed(precision)))
           lines.push({ coordinates: [{ x: startX, y }, { x: endX, y }] })
           texts.push({
             x: startX,

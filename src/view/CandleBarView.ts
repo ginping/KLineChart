@@ -12,19 +12,16 @@
  * limitations under the License.
  */
 
-import Nullable from '../common/Nullable'
-import VisibleData from '../common/VisibleData'
-import BarSpace from '../common/BarSpace'
-import { EventHandler } from '../common/SyntheticEvent'
+import type Nullable from '../common/Nullable'
+import type { VisibleRangeData } from '../common/Data'
+import type BarSpace from '../common/BarSpace'
+import { isValid } from '../common/utils/typeChecks'
+import type { EventHandler } from '../common/SyntheticEvent'
 import { ActionType } from '../common/Action'
-import { CandleType, CandleBarColor, RectStyle, PolygonType } from '../common/Styles'
+import { CandleType, type CandleBarColor, type RectStyle, PolygonType, CandleColorCompareRule } from '../common/Styles'
 
-import ChartStore from '../store/ChartStore'
-
-import Axis from '../component/Axis'
-
-import { FigureCreate } from '../component/Figure'
-import { RectAttrs } from '../extension/figure/rect'
+import type { FigureCreate } from '../component/Figure'
+import type { RectAttrs } from '../extension/figure/rect'
 
 import ChildrenView from './ChildrenView'
 
@@ -36,8 +33,8 @@ export interface CandleBarOptions {
 }
 
 export default class CandleBarView extends ChildrenView {
-  private readonly _boundCandleBarClickEvent = (data: VisibleData) => () => {
-    this.getWidget().getPane().getChart().getChartStore().getActionStore().execute(ActionType.OnCandleBarClick, data)
+  private readonly _boundCandleBarClickEvent = (data: VisibleRangeData) => () => {
+    this.getWidget().getPane().getChart().getChartStore().executeAction(ActionType.OnCandleBarClick, data)
     return false
   }
 
@@ -45,159 +42,189 @@ export default class CandleBarView extends ChildrenView {
     const pane = this.getWidget().getPane()
     const isMain = pane.getId() === PaneIdConstants.CANDLE
     const chartStore = pane.getChart().getChartStore()
-    const candleBarOptions = this.getCandleBarOptions(chartStore)
+    const candleBarOptions = this.getCandleBarOptions()
     if (candleBarOptions !== null) {
+      const { type, styles } = candleBarOptions
+      let ohlcSize = 0
+      let halfOhlcSize = 0
+      if (candleBarOptions.type === CandleType.Ohlc) {
+        const { gapBar } = chartStore.getBarSpace()
+        ohlcSize = Math.min(Math.max(Math.round(gapBar * 0.2), 1), 8)
+        if (ohlcSize > 2 && ohlcSize % 2 === 1) {
+          ohlcSize--
+        }
+        halfOhlcSize = Math.floor(halfOhlcSize / 2)
+      }
       const yAxis = pane.getAxisComponent()
-      this.eachChildren((data: VisibleData, barSpace: BarSpace) => {
-        this._drawCandleBar(ctx, yAxis, data, barSpace, candleBarOptions, isMain)
+      this.eachChildren((visibleData, barSpace) => {
+        const { x, data: { current, prev } } = visibleData
+        if (isValid(current)) {
+          const { open, high, low, close } = current
+          const comparePrice = styles.compareRule === CandleColorCompareRule.CurrentOpen ? open : (prev?.close ?? close)
+          const colors: string[] = []
+          if (close > comparePrice) {
+            colors[0] = styles.upColor
+            colors[1] = styles.upBorderColor
+            colors[2] = styles.upWickColor
+          } else if (close < comparePrice) {
+            colors[0] = styles.downColor
+            colors[1] = styles.downBorderColor
+            colors[2] = styles.downWickColor
+          } else {
+            colors[0] = styles.noChangeColor
+            colors[1] = styles.noChangeBorderColor
+            colors[2] = styles.noChangeWickColor
+          }
+          const openY = yAxis.convertToPixel(open)
+          const closeY = yAxis.convertToPixel(close)
+          const priceY = [
+            openY, closeY,
+            yAxis.convertToPixel(high),
+            yAxis.convertToPixel(low)
+          ]
+          priceY.sort((a, b) => a - b)
+
+          const correction = barSpace.gapBar % 2 === 0 ? 1 : 0
+          let rects: Array<FigureCreate<RectAttrs | RectAttrs[], Partial<RectStyle>>> = []
+          switch (type) {
+            case CandleType.CandleSolid: {
+              rects = this._createSolidBar(x, priceY, barSpace, colors, correction)
+              break
+            }
+            case CandleType.CandleStroke: {
+              rects = this._createStrokeBar(x, priceY, barSpace, colors, correction)
+              break
+            }
+            case CandleType.CandleUpStroke: {
+              if (close > open) {
+                rects = this._createStrokeBar(x, priceY, barSpace, colors, correction)
+              } else {
+                rects = this._createSolidBar(x, priceY, barSpace, colors, correction)
+              }
+              break
+            }
+            case CandleType.CandleDownStroke: {
+              if (open > close) {
+                rects = this._createStrokeBar(x, priceY, barSpace, colors, correction)
+              } else {
+                rects = this._createSolidBar(x, priceY, barSpace, colors, correction)
+              }
+              break
+            }
+            case CandleType.Ohlc: {
+              rects = [
+                {
+                  name: 'rect',
+                  attrs: [
+                    {
+                      x: x - halfOhlcSize,
+                      y: priceY[0],
+                      width: ohlcSize,
+                      height: priceY[3] - priceY[0]
+                    },
+                    {
+                      x: x - barSpace.halfGapBar,
+                      y: openY + ohlcSize > priceY[3] ? priceY[3] - ohlcSize : openY,
+                      width: barSpace.halfGapBar,
+                      height: ohlcSize
+                    },
+                    {
+                      x: x + halfOhlcSize,
+                      y: closeY + ohlcSize > priceY[3] ? priceY[3] - ohlcSize : closeY,
+                      width: barSpace.halfGapBar - halfOhlcSize,
+                      height: ohlcSize
+                    }
+                  ],
+                  styles: { color: colors[0] }
+                }
+              ]
+              break
+            }
+          }
+          rects.forEach(rect => {
+            let handler: Nullable<EventHandler> = null
+            if (isMain) {
+              handler = {
+                mouseClickEvent: this._boundCandleBarClickEvent(visibleData)
+              }
+            }
+            this.createFigure(rect, handler ?? undefined)?.draw(ctx)
+          })
+        }
       })
     }
   }
 
-  protected getCandleBarOptions (chartStore: ChartStore): Nullable<CandleBarOptions> {
-    const candleStyles = chartStore.getStyles().candle
+  protected getCandleBarOptions (): Nullable<CandleBarOptions> {
+    const candleStyles = this.getWidget().getPane().getChart().getStyles().candle
     return {
       type: candleStyles.type as Exclude<CandleType, CandleType.Area>,
       styles: candleStyles.bar
     }
   }
 
-  private _drawCandleBar (
-    ctx: CanvasRenderingContext2D,
-    axis: Axis,
-    data: VisibleData,
-    barSpace: BarSpace,
-    candleBarOptions: CandleBarOptions,
-    isMain: boolean
-  ): void {
-    const { data: kLineData, x } = data
-    const { open, high, low, close } = kLineData
-    const { halfGapBar, gapBar } = barSpace
-    const { type, styles } = candleBarOptions
-    let color: string
-    let borderColor: string
-    let wickColor: string
-    if (close > open) {
-      color = styles.upColor
-      borderColor = styles.upBorderColor
-      wickColor = styles.upWickColor
-    } else if (close < open) {
-      color = styles.downColor
-      borderColor = styles.downBorderColor
-      wickColor = styles.downWickColor
-    } else {
-      color = styles.noChangeColor
-      borderColor = styles.noChangeBorderColor
-      wickColor = styles.noChangeWickColor
-    }
-    const openY = axis.convertToPixel(open)
-    const closeY = axis.convertToPixel(close)
-    const priceY = [
-      openY, closeY,
-      axis.convertToPixel(high),
-      axis.convertToPixel(low)
-    ]
-    priceY.sort((a, b) => a - b)
-
-    const barHeight = Math.max(1, priceY[2] - priceY[1])
-
-    let rects: Array<FigureCreate<RectAttrs, Partial<RectStyle>>> = []
-    if (type !== CandleType.Ohlc) {
-      rects.push({
+  private _createSolidBar (x: number, priceY: number[], barSpace: BarSpace, colors: string[], correction: number): Array<FigureCreate<RectAttrs | RectAttrs[], Partial<RectStyle>>> {
+    return [
+      {
         name: 'rect',
         attrs: {
-          x: x - 0.5,
+          x,
           y: priceY[0],
           width: 1,
-          height: priceY[1] - priceY[0]
+          height: priceY[3] - priceY[0]
         },
-        styles: { color: wickColor }
-      })
-      if (
-        type === CandleType.CandleStroke ||
-        (type === CandleType.CandleUpStroke && open < close) ||
-        (type === CandleType.CandleDownStroke && open > close)
-      ) {
-        rects.push({
-          name: 'rect',
-          attrs: {
-            x: x - halfGapBar + 0.5,
-            y: priceY[1],
-            width: gapBar - 1,
-            height: barHeight
-          },
-          styles: {
-            style: PolygonType.Stroke,
-            borderColor
-          }
-        })
-      } else {
-        rects.push({
-          name: 'rect',
-          attrs: {
-            x: x - halfGapBar + 0.5,
-            y: priceY[1],
-            width: gapBar - 1,
-            height: barHeight
-          },
-          styles: {
-            style: PolygonType.StrokeFill,
-            color,
-            borderColor
-          }
-        })
-      }
-      rects.push({
+        styles: { color: colors[2] }
+      },
+      {
         name: 'rect',
         attrs: {
-          x: x - 0.5,
-          y: priceY[2],
-          width: 1,
-          height: priceY[3] - priceY[2]
+          x: x - barSpace.halfGapBar,
+          y: priceY[1],
+          width: barSpace.gapBar + correction,
+          height: Math.max(1, priceY[2] - priceY[1])
         },
-        styles: { color: wickColor }
-      })
-    } else {
-      const size = Math.min(Math.max(Math.round(barSpace.gapBar * 0.1), 1), 3)
-      rects = [
-        {
-          name: 'rect',
-          attrs: {
-            x: x - size / 2,
-            y: priceY[0],
-            width: size,
-            height: priceY[3] - priceY[0]
-          },
-          styles: { color }
-        }, {
-          name: 'rect',
-          attrs: {
-            x: x - halfGapBar,
-            y: openY + size > priceY[3] ? priceY[3] - size : openY,
-            width: halfGapBar - size / 2,
-            height: size
-          },
-          styles: { color }
-        }, {
-          name: 'rect',
-          attrs: {
-            x: x + size / 2,
-            y: closeY + size > priceY[3] ? priceY[3] - size : closeY,
-            width: halfGapBar - size / 2,
-            height: size
-          },
-          styles: { color }
-        }
-      ]
-    }
-    rects.forEach(({ attrs, styles }) => {
-      let handler: EventHandler | undefined
-      if (isMain) {
-        handler = {
-          mouseClickEvent: this._boundCandleBarClickEvent(data)
+        styles: {
+          style: PolygonType.StrokeFill,
+          color: colors[0],
+          borderColor: colors[1]
         }
       }
-      this.createFigure('rect', attrs, styles, handler)?.draw(ctx)
-    })
+    ]
+  }
+
+  private _createStrokeBar (x: number, priceY: number[], barSpace: BarSpace, colors: string[], correction: number): Array<FigureCreate<RectAttrs | RectAttrs[], Partial<RectStyle>>> {
+    return [
+      {
+        name: 'rect',
+        attrs: [
+          {
+            x,
+            y: priceY[0],
+            width: 1,
+            height: priceY[1] - priceY[0]
+          },
+          {
+            x,
+            y: priceY[2],
+            width: 1,
+            height: priceY[3] - priceY[2]
+          }
+        ],
+        styles: { color: colors[2] }
+      },
+      {
+        name: 'rect',
+        attrs: {
+          x: x - barSpace.halfGapBar,
+          y: priceY[1],
+          width: barSpace.gapBar + correction,
+          height: Math.max(1, priceY[2] - priceY[1])
+        },
+        styles: {
+          style: PolygonType.Stroke,
+          borderColor: colors[1]
+        }
+      }
+    ]
   }
 }

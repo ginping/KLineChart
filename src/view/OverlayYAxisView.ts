@@ -12,24 +12,19 @@
  * limitations under the License.
  */
 
-import Nullable from '../common/Nullable'
-import Coordinate from '../common/Coordinate'
-import Bounding from '../common/Bounding'
-import BarSpace from '../common/BarSpace'
-import Precision from '../common/Precision'
-import { OverlayStyle } from '../common/Styles'
-import { CustomApi } from '../Options'
-import { formatPrecision, formatThousands } from '../common/utils/format'
+import type Nullable from '../common/Nullable'
+import type Coordinate from '../common/Coordinate'
+import { formatPrecision } from '../common/utils/format'
 import { isNumber } from '../common/utils/typeChecks'
 
-import Axis from '../component/Axis'
-import XAxis from '../component/XAxis'
-import YAxis from '../component/YAxis'
-import Overlay, { OverlayFigure } from '../component/Overlay'
-
-import { EventOverlayInfo } from '../store/OverlayStore'
+import type { Axis } from '../component/Axis'
+import type { YAxis } from '../component/YAxis'
+import type { OverlayFigure, Overlay } from '../component/Overlay'
+import type OverlayImp from '../component/Overlay'
 
 import OverlayView from './OverlayView'
+
+import type YAxisImp from '../component/YAxis'
 
 export default class OverlayYAxisView<C extends Axis = YAxis> extends OverlayView<C> {
   override coordinateToPointTimestampDataIndexFlag (): boolean {
@@ -38,50 +33,37 @@ export default class OverlayYAxisView<C extends Axis = YAxis> extends OverlayVie
 
   override drawDefaultFigures (
     ctx: CanvasRenderingContext2D,
-    overlay: Overlay,
-    coordinates: Coordinate[],
-    bounding: Bounding,
-    precision: Precision,
-    dateTimeFormat: Intl.DateTimeFormat,
-    customApi: CustomApi,
-    thousandsSeparator: string,
-    defaultStyles: OverlayStyle,
-    xAxis: Nullable<XAxis>,
-    yAxis: Nullable<YAxis>,
-    _hoverInstanceInfo: EventOverlayInfo,
-    clickInstanceInfo: EventOverlayInfo
+    overlay: OverlayImp,
+    coordinates: Coordinate[]
   ): void {
     this.drawFigures(
       ctx,
       overlay,
-      this.getDefaultFigures(overlay, coordinates, bounding, precision, dateTimeFormat, customApi, thousandsSeparator, xAxis, yAxis, clickInstanceInfo),
-      defaultStyles
+      this.getDefaultFigures(overlay, coordinates)
     )
   }
 
   protected getDefaultFigures (
     overlay: Overlay,
-    coordinates: Coordinate[],
-    bounding: Bounding,
-    precision: Precision,
-    _dateTimeFormat: Intl.DateTimeFormat,
-    _customApi: CustomApi,
-    thousandsSeparator: string,
-    _xAxis: Nullable<XAxis>,
-    yAxis: Nullable<YAxis>,
-    clickInstanceInfo: EventOverlayInfo
+    coordinates: Coordinate[]
   ): OverlayFigure[] {
+    const widget = this.getWidget()
+    const pane = widget.getPane()
+    const chartStore = pane.getChart().getChartStore()
+    const clickOverlayInfo = chartStore.getClickOverlayInfo()
     const figures: OverlayFigure[] = []
     if (
       overlay.needDefaultYAxisFigure &&
-      overlay.id === clickInstanceInfo.instance?.id &&
-      clickInstanceInfo.paneId === this.getWidget().getPane().getId()
+      overlay.id === clickOverlayInfo.overlay?.id &&
+      clickOverlayInfo.paneId === pane.getId()
     ) {
+      const yAxis = pane.getAxisComponent() as unknown as YAxisImp
+      const bounding = widget.getBounding()
       let topY = Number.MAX_SAFE_INTEGER
       let bottomY = Number.MIN_SAFE_INTEGER
-      const isFromZero = yAxis?.isFromZero() ?? false
-      let textAlign: CanvasTextAlign
-      let x: number
+      const isFromZero = yAxis.isFromZero()
+      let textAlign: CanvasTextAlign = 'left'
+      let x = 0
       if (isFromZero) {
         textAlign = 'left'
         x = 0
@@ -89,12 +71,14 @@ export default class OverlayYAxisView<C extends Axis = YAxis> extends OverlayVie
         textAlign = 'right'
         x = bounding.width
       }
+      const decimalFold = chartStore.getDecimalFold()
+      const thousandsSeparator = chartStore.getThousandsSeparator()
       coordinates.forEach((coordinate, index) => {
         const point = overlay.points[index]
         if (isNumber(point.value)) {
           topY = Math.min(topY, coordinate.y)
           bottomY = Math.max(bottomY, coordinate.y)
-          const text = formatThousands(formatPrecision(point.value, precision.price), thousandsSeparator)
+          const text = decimalFold.format(thousandsSeparator.format(formatPrecision(point.value, chartStore.getPrecision().price)))
           figures.push({ type: 'text', attrs: { x, y: coordinate.y, text, align: textAlign, baseline: 'middle' }, ignoreEvent: true })
         }
       })
@@ -107,16 +91,14 @@ export default class OverlayYAxisView<C extends Axis = YAxis> extends OverlayVie
 
   override getFigures (
     overlay: Overlay,
-    coordinates: Coordinate[],
-    bounding: Bounding,
-    barSpace: BarSpace,
-    precision: Precision,
-    thousandsSeparator: string,
-    dateTimeFormat: Intl.DateTimeFormat,
-    defaultStyles: OverlayStyle,
-    xAxis: Nullable<XAxis>,
-    yAxis: Nullable<YAxis>
+    coordinates: Coordinate[]
   ): OverlayFigure | OverlayFigure[] {
-    return overlay.createYAxisFigures?.({ overlay, coordinates, bounding, barSpace, precision, thousandsSeparator, dateTimeFormat, defaultStyles, xAxis, yAxis }) ?? []
+    const widget = this.getWidget()
+    const pane = widget.getPane()
+    const chart = pane.getChart()
+    const yAxis = pane.getAxisComponent() as unknown as Nullable<YAxis>
+    const xAxis = chart.getXAxisPane().getAxisComponent()
+    const bounding = widget.getBounding()
+    return overlay.createYAxisFigures?.({ chart, overlay, coordinates, bounding, xAxis, yAxis }) ?? []
   }
 }

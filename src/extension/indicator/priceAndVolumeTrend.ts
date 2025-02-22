@@ -12,8 +12,7 @@
  * limitations under the License.
  */
 
-import KLineData from '../../common/KLineData'
-import { IndicatorTemplate } from '../../component/Indicator'
+import type { IndicatorTemplate } from '../../component/Indicator'
 
 interface Pvt {
   pvt?: number
@@ -32,7 +31,7 @@ const priceAndVolumeTrend: IndicatorTemplate<Pvt> = {
   figures: [
     { key: 'pvt', title: 'PVT: ', type: 'line' }
   ],
-  calc: (dataList: KLineData[]) => {
+  calc: (dataList) => {
     let sum = 0
     return dataList.map((kLineData, i) => {
       const pvt: Pvt = {}

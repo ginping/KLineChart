@@ -12,15 +12,16 @@
  * limitations under the License.
  */
 
-import Coordinate from '../common/Coordinate'
-import VisibleData from '../common/VisibleData'
-import { CandleHighLowPriceMarkStyle } from '../common/Styles'
+import type Coordinate from '../common/Coordinate'
+import type { CandleHighLowPriceMarkStyle } from '../common/Styles'
 
-import ChildrenView from './ChildrenView'
+import View from './View'
 
-import { formatPrecision, formatThousands } from '../common/utils/format'
+import type { YAxis } from '../component/YAxis'
 
-export default class CandleHighLowPriceView extends ChildrenView {
+import { formatPrecision } from '../common/utils/format'
+
+export default class CandleHighLowPriceView extends View<YAxis> {
   override drawImp (ctx: CanvasRenderingContext2D): void {
     const widget = this.getWidget()
     const pane = widget.getPane()
@@ -29,30 +30,20 @@ export default class CandleHighLowPriceView extends ChildrenView {
     const highPriceMarkStyles = priceMarkStyles.high
     const lowPriceMarkStyles = priceMarkStyles.low
     if (priceMarkStyles.show && (highPriceMarkStyles.show || lowPriceMarkStyles.show)) {
-      const thousandsSeparator = chartStore.getThousandsSeparator()
+      const highestLowestPrice = chartStore.getVisibleRangeHighLowPrice()
       const precision = chartStore.getPrecision()
       const yAxis = pane.getAxisComponent()
-      let high = Number.MIN_SAFE_INTEGER
-      let highX = 0
-      let low = Number.MAX_SAFE_INTEGER
-      let lowX = 0
-      this.eachChildren((data: VisibleData) => {
-        const { data: kLineData, x } = data
-        if (high < kLineData.high) {
-          high = kLineData.high
-          highX = x
-        }
-        if (low > kLineData.low) {
-          low = kLineData.low
-          lowX = x
-        }
-      })
+
+      const { price: high, x: highX } = highestLowestPrice[0]
+      const { price: low, x: lowX } = highestLowestPrice[1]
       const highY = yAxis.convertToPixel(high)
       const lowY = yAxis.convertToPixel(low)
+      const decimalFold = chartStore.getDecimalFold()
+      const thousandsSeparator = chartStore.getThousandsSeparator()
       if (highPriceMarkStyles.show && high !== Number.MIN_SAFE_INTEGER) {
         this._drawMark(
           ctx,
-          formatThousands(formatPrecision(high, precision.price), thousandsSeparator),
+          decimalFold.format(thousandsSeparator.format(formatPrecision(high, precision.price))),
           { x: highX, y: highY },
           highY < lowY ? [-2, -5] : [2, 5],
           highPriceMarkStyles
@@ -61,7 +52,7 @@ export default class CandleHighLowPriceView extends ChildrenView {
       if (lowPriceMarkStyles.show && low !== Number.MAX_SAFE_INTEGER) {
         this._drawMark(
           ctx,
-          formatThousands(formatPrecision(low, precision.price), thousandsSeparator),
+          decimalFold.format(thousandsSeparator.format(formatPrecision(low, precision.price))),
           { x: lowX, y: lowY },
           highY < lowY ? [2, 5] : [-2, -5],
           lowPriceMarkStyles
@@ -79,21 +70,21 @@ export default class CandleHighLowPriceView extends ChildrenView {
   ): void {
     const startX = coordinate.x
     const startY = coordinate.y + offsets[0]
-    this.createFigure(
-      'line',
-      {
+    this.createFigure({
+      name: 'line',
+      attrs: {
         coordinates: [
           { x: startX - 2, y: startY + offsets[0] },
           { x: startX, y: startY },
           { x: startX + 2, y: startY + offsets[0] }
         ]
       },
-      { color: styles.color }
-    )?.draw(ctx)
+      styles: { color: styles.color }
+    })?.draw(ctx)
 
-    let lineEndX: number
-    let textStartX: number
-    let textAlign: string
+    let lineEndX = 0
+    let textStartX = 0
+    let textAlign = 'left'
     const { width } = this.getWidget().getBounding()
     if (startX > width / 2) {
       lineEndX = startX - 5
@@ -106,32 +97,32 @@ export default class CandleHighLowPriceView extends ChildrenView {
     }
 
     const y = startY + offsets[1]
-    this.createFigure(
-      'line',
-      {
+    this.createFigure({
+      name: 'line',
+      attrs: {
         coordinates: [
           { x: startX, y: startY },
           { x: startX, y },
           { x: lineEndX, y }
         ]
       },
-      { color: styles.color }
-    )?.draw(ctx)
-    this.createFigure(
-      'text',
-      {
+      styles: { color: styles.color }
+    })?.draw(ctx)
+    this.createFigure({
+      name: 'text',
+      attrs: {
         x: textStartX,
         y,
         text,
         align: textAlign,
         baseline: 'middle'
       },
-      {
+      styles: {
         color: styles.color,
         size: styles.textSize,
         family: styles.textFamily,
         weight: styles.textWeight
       }
-    )?.draw(ctx)
+    })?.draw(ctx)
   }
 }

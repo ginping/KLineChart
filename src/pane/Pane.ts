@@ -11,29 +11,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import Nullable from '../common/Nullable'
-import Updater, { UpdateLevel } from '../common/Updater'
-import Bounding, { getDefaultBounding } from '../common/Bounding'
 
-import Chart from '../Chart'
-
+import type Updater from '../common/Updater'
+import { UpdateLevel } from '../common/Updater'
+import type Bounding from '../common/Bounding'
+import { createDefaultBounding } from '../common/Bounding'
 import { createDom } from '../common/utils/dom'
+import { merge } from '../common/utils/typeChecks'
+
+import type Chart from '../Chart'
+
 export default abstract class Pane implements Updater {
-  private _rootContainer: HTMLElement
-  private _container: HTMLElement
+  private readonly _container: HTMLElement
   private readonly _id: string
   private readonly _chart: Chart
 
-  private readonly _bounding: Bounding = getDefaultBounding()
+  private readonly _bounding = createDefaultBounding()
 
-  constructor (rootContainer: HTMLElement, afterElement: Nullable<HTMLElement>, chart: Chart, id: string) {
+  private readonly _originalBounding = createDefaultBounding()
+
+  private _visible = true
+
+  constructor (chart: Chart, id: string) {
     this._chart = chart
     this._id = id
-    this._init(rootContainer, afterElement)
-  }
-
-  private _init (rootContainer: HTMLElement, afterElement: Nullable<HTMLElement>): void {
-    this._rootContainer = rootContainer
     this._container = createDom('div', {
       width: '100%',
       margin: '0',
@@ -42,15 +43,21 @@ export default abstract class Pane implements Updater {
       overflow: 'hidden',
       boxSizing: 'border-box'
     })
-    if (afterElement !== null) {
-      rootContainer.insertBefore(this._container, afterElement)
-    } else {
-      rootContainer.appendChild(this._container)
-    }
   }
 
   getContainer (): HTMLElement {
     return this._container
+  }
+
+  setVisible (visible: boolean): void {
+    if (this._visible !== visible) {
+      this._container.style.display = visible ? 'block' : 'none'
+      this._visible = visible
+    }
+  }
+
+  getVisible (): boolean {
+    return this._visible
   }
 
   getId (): string {
@@ -65,15 +72,19 @@ export default abstract class Pane implements Updater {
     return this._bounding
   }
 
+  setOriginalBounding (bounding: Partial<Bounding>): void {
+    merge(this._originalBounding, bounding)
+  }
+
+  getOriginalBounding (): Bounding {
+    return this._originalBounding
+  }
+
   update (level?: UpdateLevel): void {
-    if (this._bounding.height !== this._container.offsetHeight) {
+    if (this._bounding.height !== this._container.clientHeight) {
       this._container.style.height = `${this._bounding.height}px`
     }
     this.updateImp(level ?? UpdateLevel.Drawer, this._container, this._bounding)
-  }
-
-  destroy (): void {
-    this._rootContainer.removeChild(this._container)
   }
 
   abstract setBounding (...bounding: Array<Partial<Bounding>>): Pane

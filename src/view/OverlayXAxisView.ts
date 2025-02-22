@@ -12,21 +12,17 @@
  * limitations under the License.
  */
 
-import Nullable from '../common/Nullable'
-import Coordinate from '../common/Coordinate'
-import Bounding from '../common/Bounding'
-import BarSpace from '../common/BarSpace'
-import Precision from '../common/Precision'
-import { OverlayStyle } from '../common/Styles'
+import type Nullable from '../common/Nullable'
+import type Coordinate from '../common/Coordinate'
+
 import { isNumber } from '../common/utils/typeChecks'
 
-import { CustomApi, FormatDateType } from '../Options'
+import { FormatDateType } from '../Options'
 
-import XAxis from '../component/XAxis'
-import YAxis from '../component/YAxis'
-import Overlay, { OverlayFigure } from '../component/Overlay'
-
-import OverlayStore, { EventOverlayInfo, ProgressOverlayInfo } from '../store/OverlayStore'
+import type { XAxis } from '../component/XAxis'
+import type { YAxis } from '../component/YAxis'
+import type { OverlayFigure, Overlay } from '../component/Overlay'
+import type OverlayImp from '../component/Overlay'
 
 import OverlayYAxisView from './OverlayYAxisView'
 
@@ -39,28 +35,24 @@ export default class OverlayXAxisView extends OverlayYAxisView<XAxis> {
     return false
   }
 
-  override getCompleteOverlays (overlayStore: OverlayStore): Overlay[] {
-    return overlayStore.getInstances()
+  override getCompleteOverlays (): OverlayImp[] {
+    return this.getWidget().getPane().getChart().getChartStore().getOverlaysByPaneId()
   }
 
-  override getProgressOverlay (info: ProgressOverlayInfo): Overlay {
-    return info.instance
+  override getProgressOverlay (): Nullable<OverlayImp> {
+    return this.getWidget().getPane().getChart().getChartStore().getProgressOverlayInfo()?.overlay ?? null
   }
 
   override getDefaultFigures (
     overlay: Overlay,
-    coordinates: Coordinate[],
-    bounding: Bounding,
-    _precision: Precision,
-    dateTimeFormat: Intl.DateTimeFormat,
-    customApi: CustomApi,
-    _thousandsSeparator: string,
-    _xAxis: Nullable<XAxis>,
-    _yAxis: Nullable<YAxis>,
-    clickInstanceInfo: EventOverlayInfo
+    coordinates: Coordinate[]
   ): OverlayFigure[] {
     const figures: OverlayFigure[] = []
-    if (overlay.needDefaultXAxisFigure && overlay.id === clickInstanceInfo.instance?.id) {
+    const widget = this.getWidget()
+    const pane = widget.getPane()
+    const chartStore = pane.getChart().getChartStore()
+    const clickOverlayInfo = chartStore.getClickOverlayInfo()
+    if (overlay.needDefaultXAxisFigure && overlay.id === clickOverlayInfo.overlay?.id) {
       let leftX = Number.MAX_SAFE_INTEGER
       let rightX = Number.MIN_SAFE_INTEGER
       coordinates.forEach((coordinate, index) => {
@@ -68,29 +60,27 @@ export default class OverlayXAxisView extends OverlayYAxisView<XAxis> {
         rightX = Math.max(rightX, coordinate.x)
         const point = overlay.points[index]
         if (isNumber(point.timestamp)) {
-          const text = customApi.formatDate(dateTimeFormat, point.timestamp, 'YYYY-MM-DD HH:mm', FormatDateType.Crosshair)
+          const text = chartStore.getCustomApi().formatDate(point.timestamp, 'YYYY-MM-DD HH:mm', FormatDateType.Crosshair)
           figures.push({ type: 'text', attrs: { x: coordinate.x, y: 0, text, align: 'center' }, ignoreEvent: true })
         }
       })
       if (coordinates.length > 1) {
-        figures.unshift({ type: 'rect', attrs: { x: leftX, y: 0, width: rightX - leftX, height: bounding.height }, ignoreEvent: true })
+        figures.unshift({ type: 'rect', attrs: { x: leftX, y: 0, width: rightX - leftX, height: widget.getBounding().height }, ignoreEvent: true })
       }
     }
     return figures
   }
 
   override getFigures (
-    overlay: Overlay,
-    coordinates: Coordinate[],
-    bounding: Bounding,
-    barSpace: BarSpace,
-    precision: Precision,
-    thousandsSeparator: string,
-    dateTimeFormat: Intl.DateTimeFormat,
-    defaultStyles: OverlayStyle,
-    xAxis: Nullable<XAxis>,
-    yAxis: Nullable<YAxis>
+    o: Overlay,
+    coordinates: Coordinate[]
   ): OverlayFigure | OverlayFigure[] {
-    return overlay.createXAxisFigures?.({ overlay, coordinates, bounding, barSpace, precision, thousandsSeparator, dateTimeFormat, defaultStyles, xAxis, yAxis }) ?? []
+    const widget = this.getWidget()
+    const pane = widget.getPane()
+    const chart = pane.getChart()
+    const yAxis = pane.getAxisComponent() as unknown as Nullable<YAxis>
+    const xAxis = chart.getXAxisPane().getAxisComponent()
+    const bounding = widget.getBounding()
+    return o.createXAxisFigures?.({ chart, overlay: o, coordinates, bounding, xAxis, yAxis }) ?? []
   }
 }

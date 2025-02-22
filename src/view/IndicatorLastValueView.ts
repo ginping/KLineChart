@@ -12,14 +12,13 @@
  * limitations under the License.
  */
 
-import { formatPrecision, formatThousands } from '../common/utils/format'
-import { isValid } from '../common/utils/typeChecks'
+import { isNumber, isValid } from '../common/utils/typeChecks'
 
-import { eachFigures, IndicatorFigure, IndicatorFigureStyle } from '../component/Indicator'
+import { eachFigures, type IndicatorFigure, type IndicatorFigureStyle } from '../component/Indicator'
 
 import View from './View'
 
-import YAxis from '../component/YAxis'
+import type { YAxis } from '../component/YAxis'
 
 export default class IndicatorLastValueView extends View<YAxis> {
   override drawImp (ctx: CanvasRenderingContext2D): void {
@@ -27,32 +26,41 @@ export default class IndicatorLastValueView extends View<YAxis> {
     const pane = widget.getPane()
     const bounding = widget.getBounding()
     const chartStore = pane.getChart().getChartStore()
-    const customApi = chartStore.getCustomApi()
     const defaultStyles = chartStore.getStyles().indicator
     const lastValueMarkStyles = defaultStyles.lastValueMark
     const lastValueMarkTextStyles = lastValueMarkStyles.text
     if (lastValueMarkStyles.show) {
       const yAxis = pane.getAxisComponent()
+      const yAxisRange = yAxis.getRange()
       const dataList = chartStore.getDataList()
       const dataIndex = dataList.length - 1
-      const indicators = chartStore.getIndicatorStore().getInstances(pane.getId())
+      const indicators = chartStore.getIndicatorsByPaneId(pane.getId())
+      const customApi = chartStore.getCustomApi()
+      const decimalFold = chartStore.getDecimalFold()
       const thousandsSeparator = chartStore.getThousandsSeparator()
       indicators.forEach(indicator => {
         const result = indicator.result
-        const indicatorData = result[dataIndex]
-        if (isValid(indicatorData) && indicator.visible) {
+        const data = result[dataIndex] ?? result[dataIndex - 1] ?? {}
+        if (isValid(data) && indicator.visible) {
           const precision = indicator.precision
-          eachFigures(dataList, indicator, dataIndex, defaultStyles, (figure: IndicatorFigure, figureStyles: Required<IndicatorFigureStyle>) => {
-            const value = indicatorData[figure.key]
-            if (isValid<number>(value)) {
+          eachFigures(indicator, dataIndex, defaultStyles, (figure: IndicatorFigure, figureStyles: Required<IndicatorFigureStyle>) => {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ignore
+            const value = data[figure.key]
+            if (isNumber(value)) {
               const y = yAxis.convertToNicePixel(value)
-              let text = formatPrecision(value, precision)
+              let text = yAxis.displayValueToText(
+                yAxis.realValueToDisplayValue(
+                  yAxis.valueToRealValue(value, { range: yAxisRange }),
+                  { range: yAxisRange }
+                ),
+                precision
+              )
               if (indicator.shouldFormatBigNumber) {
                 text = customApi.formatBigNumber(text)
               }
-              text = formatThousands(text, thousandsSeparator)
-              let x: number
-              let textAlign: CanvasTextAlign
+              text = decimalFold.format(thousandsSeparator.format(text))
+              let x = 0
+              let textAlign: CanvasTextAlign = 'left'
               if (yAxis.isFromZero()) {
                 x = 0
                 textAlign = 'left'
@@ -61,20 +69,20 @@ export default class IndicatorLastValueView extends View<YAxis> {
                 textAlign = 'right'
               }
 
-              this.createFigure(
-                'text',
-                {
+              this.createFigure({
+                name: 'text',
+                attrs: {
                   x,
                   y,
                   text,
                   align: textAlign,
                   baseline: 'middle'
                 },
-                {
+                styles: {
                   ...lastValueMarkTextStyles,
                   backgroundColor: figureStyles.color
                 }
-              )?.draw(ctx)
+              })?.draw(ctx)
             }
           })
         }

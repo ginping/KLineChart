@@ -1,3 +1,5 @@
+/* eslint-disable eslint-comments/require-description -- ignore */
+
 /**
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +22,19 @@
  * </licenses/LICENSE-lightweight-charts>).
  */
 
-import Coordinate from './Coordinate'
+import type Coordinate from './Coordinate'
 
-import Nullable from './Nullable'
+import type Nullable from './Nullable'
 
 import { isFF, isIOS } from './utils/platform'
 import { isValid } from './utils/typeChecks'
+
+export interface MouseTouchEvent extends Coordinate {
+  pageX: number
+  pageY: number
+  isTouch?: boolean
+  preventDefault?: () => void
+}
 
 export type MouseTouchEventCallback = (event: MouseTouchEvent, other?: number) => boolean
 
@@ -65,13 +74,6 @@ export interface EventHandler {
 
 export type EventName = keyof EventHandler
 
-export interface MouseTouchEvent extends Coordinate {
-  pageX: number
-  pageY: number
-  isTouch?: boolean
-  preventDefault?: () => void
-}
-
 export interface EventOptions {
   treatVertDragAsPageScroll: () => boolean
   treatHorzDragAsPageScroll: () => boolean
@@ -81,21 +83,23 @@ export interface EventOptions {
 // so we do not need to have it as variables
 const enum Delay {
   ResetClick = 500,
+  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
   LongTap = 500,
+  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
   PreventFiresTouchEvents = 500,
 }
 
-const enum ManhattanDistance {
-  CancelClick = 5,
-  CancelTap = 5,
-  DoubleClick = 5,
-  DoubleTap = 30,
+const ManhattanDistance = {
+  CancelClick: 5,
+  CancelTap: 5,
+  DoubleClick: 5,
+  DoubleTap: 30
 }
 
-const enum MouseEventButton {
-  Left = 0,
-  Middle = 1,
-  Right = 2,
+const MouseEventButton = {
+  Left: 0,
+  Middle: 1,
+  Right: 2
 }
 
 export const TOUCH_MIN_RADIUS = 10
@@ -115,24 +119,24 @@ export default class SyntheticEvent {
 
   private readonly _options: EventOptions
 
-  private _clickCount: number = 0
+  private _clickCount = 0
   private _clickTimeoutId: Nullable<TimerId> = null
   private _clickCoordinate: Coordinate = { x: Number.NEGATIVE_INFINITY, y: Number.POSITIVE_INFINITY }
 
-  private _tapCount: number = 0
+  private _tapCount = 0
   private _tapTimeoutId: Nullable<TimerId> = null
   private _tapCoordinate: Coordinate = { x: Number.NEGATIVE_INFINITY, y: Number.POSITIVE_INFINITY }
 
   private _longTapTimeoutId: Nullable<TimerId> = null
-  private _longTapActive: boolean = false
+  private _longTapActive = false
 
   private _mouseMoveStartCoordinate: Nullable<Coordinate> = null
 
   private _touchMoveStartCoordinate: Nullable<Coordinate> = null
-  private _touchMoveExceededManhattanDistance: boolean = false
+  private _touchMoveExceededManhattanDistance = false
 
-  private _cancelClick: boolean = false
-  private _cancelTap: boolean = false
+  private _cancelClick = false
+  private _cancelTap = false
 
   private _unsubscribeOutsideMouseEvents: Nullable<() => void> = null
   private _unsubscribeOutsideTouchEvents: Nullable<() => void> = null
@@ -148,13 +152,13 @@ export default class SyntheticEvent {
   private _unsubscribeRootTouchEvents: Nullable<() => void> = null
 
   private _startPinchMiddleCoordinate: Nullable<Coordinate> = null
-  private _startPinchDistance: number = 0
-  private _pinchPrevented: boolean = false
-  private _preventTouchDragProcess: boolean = false
+  private _startPinchDistance = 0
+  private _pinchPrevented = false
+  private _preventTouchDragProcess = false
 
-  private _mousePressed: boolean = false
+  private _mousePressed = false
 
-  private _lastTouchEventTimeStamp: number = 0
+  private _lastTouchEventTimeStamp = 0
 
   // for touchstart/touchmove/touchend events we handle only first touch
   // i.e. we don't support several active touches at the same time (except pinch event)
@@ -162,7 +166,7 @@ export default class SyntheticEvent {
 
   // accept all mouse leave events if it's not an iOS device
   // see _mouseEnterHandler, _mouseMoveHandler, _mouseLeaveHandler
-  private _acceptMouseLeave: boolean = !isIOS()
+  private _acceptMouseLeave = !isIOS()
 
   constructor (
     target: HTMLElement,
@@ -226,22 +230,31 @@ export default class SyntheticEvent {
     this._unsubscribeMouseWheel?.()
     this._unsubscribeContextMenu?.()
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const boundMouseMoveHandler = this._mouseMoveHandler.bind(this)
     this._unsubscribeMousemove = () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       this._target.removeEventListener('mousemove', boundMouseMoveHandler)
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     this._target.addEventListener('mousemove', boundMouseMoveHandler)
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const boundMouseWheel = this._mouseWheelHandler.bind(this)
     this._unsubscribeMouseWheel = () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       this._target.removeEventListener('wheel', boundMouseWheel)
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     this._target.addEventListener('wheel', boundMouseWheel, { passive: false })
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const boundContextMenu = this._contextMenuHandler.bind(this)
     this._unsubscribeContextMenu = () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       this._target.removeEventListener('contextmenu', boundContextMenu)
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     this._target.addEventListener('contextmenu', boundContextMenu, { passive: false })
 
     if (this._firesTouchEvents(enterEvent)) {
@@ -306,13 +319,15 @@ export default class SyntheticEvent {
       this._preventDefault(wheelEvent)
 
       switch (wheelEvent.deltaMode) {
-        case wheelEvent.DOM_DELTA_PAGE:
+        case wheelEvent.DOM_DELTA_PAGE: {
           deltaY *= 120
           break
+        }
 
-        case wheelEvent.DOM_DELTA_LINE:
+        case wheelEvent.DOM_DELTA_LINE: {
           deltaY *= 32
           break
+        }
       }
 
       if (deltaY !== 0) {
@@ -345,7 +360,7 @@ export default class SyntheticEvent {
     // prevent pinch if move event comes faster than the second touch
     this._pinchPrevented = true
 
-    const moveInfo = this._mouseTouchMoveWithDownInfo(this._getCoordinate(touch), this._touchMoveStartCoordinate as Coordinate)
+    const moveInfo = this._mouseTouchMoveWithDownInfo(this._getCoordinate(touch), this._touchMoveStartCoordinate!)
     const { xOffset, yOffset, manhattanDistance } = moveInfo
 
     if (!this._touchMoveExceededManhattanDistance && manhattanDistance < ManhattanDistance.CancelTap) {
@@ -391,7 +406,7 @@ export default class SyntheticEvent {
       return
     }
 
-    const moveInfo = this._mouseTouchMoveWithDownInfo(this._getCoordinate(moveEvent), this._mouseMoveStartCoordinate as Coordinate)
+    const moveInfo = this._mouseTouchMoveWithDownInfo(this._getCoordinate(moveEvent), this._mouseMoveStartCoordinate!)
     const { manhattanDistance } = moveInfo
 
     if (manhattanDistance >= ManhattanDistance.CancelClick) {
@@ -436,6 +451,7 @@ export default class SyntheticEvent {
 
       if (this._tapTimeoutId !== null && this._tapCount > 1) {
         const { manhattanDistance } = this._mouseTouchMoveWithDownInfo(this._getCoordinate(dblClickEvent), this._tapCoordinate)
+
         if (manhattanDistance < ManhattanDistance.DoubleTap && !this._cancelTap) {
           this._processEvent(this._makeCompatEvent(dblClickEvent), this._handler.doubleTapEvent)
         }
@@ -446,6 +462,7 @@ export default class SyntheticEvent {
 
       if (this._clickTimeoutId !== null && this._clickCount > 1) {
         const { manhattanDistance } = this._mouseTouchMoveWithDownInfo(this._getCoordinate(dblClickEvent), this._clickCoordinate)
+
         if (manhattanDistance < ManhattanDistance.DoubleClick && !this._cancelClick) {
           this._processEvent(this._makeCompatEvent(dblClickEvent), this._handler.mouseDoubleClickEvent)
         }
@@ -454,7 +471,6 @@ export default class SyntheticEvent {
     }
   }
 
-  // eslint-disable-next-line complexity
   private _touchEndHandler (touchEndEvent: TouchEvent): void {
     let touch = this._touchWithId(touchEndEvent.changedTouches, this._activeTouchId)
     if (touch === null && touchEndEvent.touches.length === 0) {
@@ -588,18 +604,25 @@ export default class SyntheticEvent {
     }
 
     {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const boundTouchMoveWithDownHandler = this._touchMoveHandler.bind(this)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const boundTouchEndHandler = this._touchEndHandler.bind(this)
 
       this._unsubscribeRootTouchEvents = () => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         rootElement.removeEventListener('touchmove', boundTouchMoveWithDownHandler)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         rootElement.removeEventListener('touchend', boundTouchEndHandler)
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       rootElement.addEventListener('touchmove', boundTouchMoveWithDownHandler, { passive: false })
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       rootElement.addEventListener('touchend', boundTouchEndHandler, { passive: false })
 
       this._clearLongTapTimeout()
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       this._longTapTimeoutId = setTimeout(this._longTapHandler.bind(this, downEvent), Delay.LongTap)
     }
 
@@ -607,6 +630,7 @@ export default class SyntheticEvent {
 
     if (this._tapTimeoutId === null) {
       this._tapCount = 0
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       this._tapTimeoutId = setTimeout(this._resetTapTimeout.bind(this), Delay.ResetClick)
       this._tapCoordinate = this._getCoordinate(touch)
     }
@@ -638,15 +662,21 @@ export default class SyntheticEvent {
     }
 
     {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const boundMouseMoveWithDownHandler = this._mouseMoveWithDownHandler.bind(this)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const boundMouseUpHandler = this._mouseUpHandler.bind(this)
 
       this._unsubscribeRootMouseEvents = () => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         rootElement.removeEventListener('mousemove', boundMouseMoveWithDownHandler)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         rootElement.removeEventListener('mouseup', boundMouseUpHandler)
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       rootElement.addEventListener('mousemove', boundMouseMoveWithDownHandler)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       rootElement.addEventListener('mouseup', boundMouseUpHandler)
     }
 
@@ -660,15 +690,18 @@ export default class SyntheticEvent {
 
     if (this._clickTimeoutId === null) {
       this._clickCount = 0
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       this._clickTimeoutId = setTimeout(this._resetClickTimeout.bind(this), Delay.ResetClick)
       this._clickCoordinate = this._getCoordinate(downEvent)
     }
   }
 
   private _init (): void {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     this._target.addEventListener('mouseenter', this._mouseEnterHandler.bind(this))
 
     // Do not show context menu when something went wrong
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     this._target.addEventListener('touchcancel', this._clearLongTapTimeout.bind(this))
 
     {
@@ -709,8 +742,10 @@ export default class SyntheticEvent {
       this._target.addEventListener('dblclick', this._onMobileSafariDoubleClick)
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     this._target.addEventListener('mouseleave', this._mouseLeaveHandler.bind(this))
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     this._target.addEventListener('touchstart', this._touchStartHandler.bind(this), { passive: true })
 
     this._target.addEventListener('mousedown', (e: MouseEvent) => {
@@ -722,6 +757,7 @@ export default class SyntheticEvent {
       return undefined
     })
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     this._target.addEventListener('mousedown', this._mouseDownHandler.bind(this))
     this._initPinch()
 
@@ -730,6 +766,7 @@ export default class SyntheticEvent {
     // it treats a touchstart and the following touchmove events as cancelable=false,
     // so we can't prevent them (as soon we subscribe on touchmove inside touchstart's handler).
     // And we'll get scroll of the page along with chart's one instead of only chart's scroll.
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     this._target.addEventListener('touchmove', () => {}, { passive: false })
   }
 
@@ -743,7 +780,7 @@ export default class SyntheticEvent {
 
     this._target.addEventListener(
       'touchstart',
-      (event: TouchEvent) => this._checkPinchState(event.touches),
+      (event: TouchEvent) => { this._checkPinchState(event.touches) },
       { passive: true }
     )
 
@@ -781,7 +818,7 @@ export default class SyntheticEvent {
   }
 
   private _startPinch (touches: TouchList): void {
-    const box = this._target.getBoundingClientRect() ?? { left: 0, top: 0 }
+    const box = this._target.getBoundingClientRect()
     this._startPinchMiddleCoordinate = {
       x: ((touches[0].clientX - box.left) + (touches[1].clientX - box.left)) / 2,
       y: ((touches[0].clientY - box.top) + (touches[1].clientY - box.top)) / 2
@@ -843,9 +880,13 @@ export default class SyntheticEvent {
   }
 
   private _firesTouchEvents (e: MouseEvent): boolean {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     if (isValid(e.sourceCapabilities?.firesTouchEvents)) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
       return e.sourceCapabilities.firesTouchEvents
     }
 
@@ -860,16 +901,14 @@ export default class SyntheticEvent {
     // TouchEvent has no clientX/Y coordinates:
     // We have to use the last Touch instead
     const eventLike = touch ?? (event as MouseEvent)
-    const box = this._target.getBoundingClientRect() ?? { left: 0, top: 0 }
-
+    const box = this._target.getBoundingClientRect()
     return {
       x: eventLike.clientX - box.left,
       y: eventLike.clientY - box.top,
 
       pageX: eventLike.pageX,
       pageY: eventLike.pageY,
-
-      isTouch: !event.type.startsWith('mouse') && event.type !== 'contextmenu' && event.type !== 'click',
+      isTouch: !event.type.startsWith('mouse') && event.type !== 'contextmenu' && event.type !== 'click' && event.type !== 'wheel',
 
       preventDefault: () => {
         if (event.type !== 'touchstart') {
@@ -901,10 +940,12 @@ export default class SyntheticEvent {
 
   private _eventTimeStamp (e: TouchEvent | MouseEvent): number {
     // for some reason e.timestamp is always 0 on iPad with magic mouse, so we use performance.now() as a fallback
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     return e.timeStamp ?? performance.now()
   }
 
   private _touchWithId (touches: TouchList, id: Nullable<number>): Nullable<Touch> {
+    // eslint-disable-next-line @typescript-eslint/prefer-for-of
     for (let i = 0; i < touches.length; ++i) {
       if (touches[i].identifier === id) {
         return touches[i]

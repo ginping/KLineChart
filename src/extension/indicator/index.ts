@@ -12,9 +12,9 @@
  * limitations under the License.
  */
 
-import Nullable from '../../common/Nullable'
+import type Nullable from '../../common/Nullable'
 
-import IndicatorImp, { IndicatorTemplate, IndicatorConstructor } from '../../component/Indicator'
+import IndicatorImp, { type IndicatorTemplate, type IndicatorConstructor } from '../../component/Indicator'
 
 import averagePrice from './averagePrice'
 import awesomeOscillator from './awesomeOscillator'
@@ -59,7 +59,7 @@ extensions.forEach((indicator: IndicatorTemplate) => {
   indicators[indicator.name] = IndicatorImp.extend(indicator)
 })
 
-function registerIndicator<D> (indicator: IndicatorTemplate<D>): void {
+function registerIndicator<D = unknown, C = unknown, E = unknown> (indicator: IndicatorTemplate<D, C, E>): void {
   indicators[indicator.name] = IndicatorImp.extend(indicator)
 }
 

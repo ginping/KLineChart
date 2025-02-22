@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-import { OverlayTemplate } from '../../component/Overlay'
+import type { OverlayTemplate } from '../../component/Overlay'
 
 import { getParallelLines } from './parallelStraightLine'
 
@@ -22,14 +22,12 @@ const priceChannelLine: OverlayTemplate = {
   needDefaultPointFigure: true,
   needDefaultXAxisFigure: true,
   needDefaultYAxisFigure: true,
-  createPointFigures: ({ coordinates, bounding }) => {
-    return [
-      {
-        type: 'line',
-        attrs: getParallelLines(coordinates, bounding, 1)
-      }
-    ]
-  }
+  createPointFigures: ({ coordinates, bounding }) => [
+    {
+      type: 'line',
+      attrs: getParallelLines(coordinates, bounding, 1)
+    }
+  ]
 }
 
 export default priceChannelLine

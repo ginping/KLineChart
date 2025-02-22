@@ -14,7 +14,7 @@
 
 import { isValid } from './utils/typeChecks'
 
-import { EventName, MouseTouchEvent, MouseTouchEventCallback } from './SyntheticEvent'
+import type { EventName, MouseTouchEvent, MouseTouchEventCallback } from './SyntheticEvent'
 
 export interface EventDispatcher {
   dispatchEvent: (name: EventName, event: MouseTouchEvent, other?: number) => boolean
@@ -25,7 +25,7 @@ export default abstract class Eventful implements EventDispatcher {
 
   private readonly _callbacks = new Map<EventName, MouseTouchEventCallback>()
 
-  registerEvent (name: EventName, callback: MouseTouchEventCallback): Eventful {
+  registerEvent (name: EventName, callback: MouseTouchEventCallback): this {
     this._callbacks.set(name, callback)
     return this
   }
@@ -39,8 +39,8 @@ export default abstract class Eventful implements EventDispatcher {
   }
 
   checkEventOn (event: MouseTouchEvent): boolean {
-    for (const eventful of this._children) {
-      if (eventful.checkEventOn(event)) {
+    for (const ful of this._children) {
+      if (ful.checkEventOn(event)) {
         return true
       }
     }
@@ -59,7 +59,7 @@ export default abstract class Eventful implements EventDispatcher {
     return this.onEvent(name, event, other)
   }
 
-  addChild (eventful: Eventful): Eventful {
+  addChild (eventful: Eventful): this {
     this._children.push(eventful)
     return this
   }

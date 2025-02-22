@@ -14,6 +14,15 @@
 
 import { isNumber, isValid } from './typeChecks'
 
+export interface DateTime {
+  YYYY: string
+  MM: string
+  DD: string
+  HH: string
+  mm: string
+  ss: string
+}
+
 const reEscapeChar = /\\(\\)?/g
 const rePropName = RegExp(
   '[^.[\\]]+' + '|' +
@@ -27,12 +36,12 @@ const rePropName = RegExp(
 export function formatValue (data: unknown, key: string, defaultValue?: unknown): unknown {
   if (isValid(data)) {
     const path: string[] = []
-    key.replace(rePropName, (subString: string, ...args: any[]) => {
+    key.replace(rePropName, (subString: string, ...args: unknown[]) => {
       let k = subString
       if (isValid(args[1])) {
-        k = args[2].replace(reEscapeChar, '$1')
+        k = (args[2] as string).replace(reEscapeChar, '$1')
       } else if (isValid(args[0])) {
-        k = args[0].trim()
+        k = (args[0] as string).trim()
       }
       path.push(k)
       return ''
@@ -48,19 +57,43 @@ export function formatValue (data: unknown, key: string, defaultValue?: unknown)
   return defaultValue ?? '--'
 }
 
-export function formatDate (dateTimeFormat: Intl.DateTimeFormat, timestamp: number, format: string): string {
-  const dateTimeString = dateTimeFormat.format(new Date(timestamp))
-  const dateTimeStringArray = dateTimeString.split(', ')
-  const dateStringArray = dateTimeStringArray[0].split('/')
-  const timeStringArray = dateTimeStringArray[1].split(':')
-  const date = {
-    YYYY: dateStringArray[2],
-    MM: dateStringArray[0],
-    DD: dateStringArray[1],
-    HH: timeStringArray[0] === '24' ? '00' : timeStringArray[0],
-    mm: timeStringArray[1],
-    ss: timeStringArray[2]
-  }
+export function formatTimestampToDateTime (dateTimeFormat: Intl.DateTimeFormat, timestamp: number): DateTime {
+  const date: Record<string, string> = {}
+  dateTimeFormat.formatToParts(new Date(timestamp)).forEach(({ type, value }) => {
+    switch (type) {
+      case 'year': {
+        date.YYYY = value
+        break
+      }
+      case 'month': {
+        date.MM = value
+        break
+      }
+      case 'day': {
+        date.DD = value
+        break
+      }
+      case 'hour': {
+        date.HH = value === '24' ? '00' : value
+        break
+      }
+      case 'minute': {
+        date.mm = value
+        break
+      }
+      case 'second': {
+        date.ss = value
+        break
+      }
+      default: { break }
+    }
+  })
+  return date as unknown as DateTime
+}
+
+export function formatTimestampToString (dateTimeFormat: Intl.DateTimeFormat, timestamp: number, format: string): string {
+  const date = formatTimestampToDateTime(dateTimeFormat, timestamp)
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- ignore
   return format.replace(/YYYY|MM|DD|HH|mm|ss/g, key => date[key])
 }
 
@@ -98,4 +131,21 @@ export function formatThousands (value: string | number, sign: string): string {
     return `${arr[0].replace(/(\d)(?=(\d{3})+$)/g, $1 => `${$1}${sign}`)}.${arr[1]}`
   }
   return vl.replace(/(\d)(?=(\d{3})+$)/g, $1 => `${$1}${sign}`)
+}
+
+export function formatFoldDecimal (value: string | number, threshold: number): string {
+  const vl = `${value}`
+  const reg = new RegExp('\\.0{' + threshold + ',}[1-9][0-9]*$')
+  if (reg.test(vl)) {
+    const result = vl.split('.')
+    const lastIndex = result.length - 1
+    const v = result[lastIndex]
+    const match = /0*/.exec(v)
+    if (isValid(match)) {
+      const count = match[0].length
+      result[lastIndex] = v.replace(/0*/, `0{${count}}`)
+      return result.join('.')
+    }
+  }
+  return vl
 }

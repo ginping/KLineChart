@@ -12,9 +12,9 @@
  * limitations under the License.
  */
 
-import Nullable from '../../common/Nullable'
+import type Nullable from '../../common/Nullable'
 
-import OverlayImp, { OverlayTemplate, OverlayConstructor, OverlayInnerConstructor } from '../../component/Overlay'
+import OverlayImp, { type OverlayTemplate, type OverlayConstructor, type OverlayInnerConstructor } from '../../component/Overlay'
 
 import fibonacciLine from './fibonacciLine'
 import horizontalRayLine from './horizontalRayLine'
@@ -46,7 +46,7 @@ extensions.forEach((template: OverlayTemplate) => {
   overlays[template.name] = OverlayImp.extend(template)
 })
 
-function registerOverlay (template: OverlayTemplate): void {
+function registerOverlay<E = unknown> (template: OverlayTemplate<E>): void {
   overlays[template.name] = OverlayImp.extend(template)
 }
 

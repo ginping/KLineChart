@@ -12,16 +12,15 @@
  * limitations under the License.
  */
 
-import Nullable from '../common/Nullable'
 import { UpdateLevel } from '../common/Updater'
-import Bounding from '../common/Bounding'
+import type Bounding from '../common/Bounding'
 import { merge } from '../common/utils/typeChecks'
 import { createDom } from '../common/utils/dom'
 import { getPixelRatio } from '../common/utils/canvas'
 
-import Chart from '../Chart'
+import type Chart from '../Chart'
 
-import DrawPane from './DrawPane'
+import type DrawPane from './DrawPane'
 import Pane from './Pane'
 
 import SeparatorWidget from '../widget/SeparatorWidget'
@@ -32,8 +31,8 @@ export default class SeparatorPane extends Pane {
 
   private readonly _separatorWidget: SeparatorWidget
 
-  constructor (rootContainer: HTMLElement, afterElement: Nullable<HTMLElement>, chart: Chart, id: string, topPane: DrawPane, bottomPane: DrawPane) {
-    super(rootContainer, afterElement, chart, id)
+  constructor (chart: Chart, id: string, topPane: DrawPane, bottomPane: DrawPane) {
+    super(chart, id)
     this.getContainer().style.overflow = ''
     this._topPane = topPane
     this._bottomPane = bottomPane
@@ -74,7 +73,7 @@ export default class SeparatorPane extends Pane {
       height: `${height}px`,
       boxSizing: 'border-box'
     })
-    const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
+    const ctx = canvas.getContext('2d')!
     const pixelRatio = getPixelRatio(canvas)
     canvas.width = width * pixelRatio
     canvas.height = height * pixelRatio

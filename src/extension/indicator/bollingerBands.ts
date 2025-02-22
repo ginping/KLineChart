@@ -12,8 +12,8 @@
  * limitations under the License.
  */
 
-import KLineData from '../../common/KLineData'
-import { Indicator, IndicatorTemplate, IndicatorSeries } from '../../component/Indicator'
+import type { KLineData } from '../../common/Data'
+import { type IndicatorTemplate, IndicatorSeries } from '../../component/Indicator'
 
 interface Boll {
   up?: number
@@ -41,7 +41,7 @@ function getBollMd (dataList: KLineData[], ma: number): number {
 /**
  * BOLL
  */
-const bollingerBands: IndicatorTemplate<Boll> = {
+const bollingerBands: IndicatorTemplate<Boll, number> = {
   name: 'BOLL',
   shortName: 'BOLL',
   series: IndicatorSeries.Price,
@@ -53,11 +53,11 @@ const bollingerBands: IndicatorTemplate<Boll> = {
     { key: 'mid', title: 'MID: ', type: 'line' },
     { key: 'dn', title: 'DN: ', type: 'line' }
   ],
-  calc: (dataList: KLineData[], indicator: Indicator<Boll>) => {
+  calc: (dataList, indicator) => {
     const params = indicator.calcParams
     const p = params[0] - 1
     let closeSum = 0
-    return dataList.map((kLineData: KLineData, i: number) => {
+    return dataList.map((kLineData, i) => {
       const close = kLineData.close
       const boll: Boll = {}
       closeSum += close

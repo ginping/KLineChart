@@ -1,22 +1,16 @@
 // https://vitepress.dev/guide/custom-theme
-import { h } from 'vue'
-import Theme from 'vitepress/theme'
+import Theme from 'vitepress/theme-without-fonts'
 
-import HomeSponsor from '../components/HomeSponsor.vue'
-import NotFound from '../components/NotFound.vue'
+import Layout from '../../@views/Layout.vue'
+
+import Badge from '../../@components/Badge.vue'
 
 import './style.css'
 
 export default {
-  ...Theme,
-  Layout: () => {
-    return h(Theme.Layout, null, {
-      // https://vitepress.dev/guide/extending-default-theme#layout-slots
-      'home-features-after': () => h(HomeSponsor),
-      'not-found': () => h(NotFound)
-    })
-  },
-  enhanceApp({ app, router, siteData }) {
-    // ...
+  extends: Theme,
+  Layout,
+  enhanceApp ({ app }) {
+    app.component('Badge', Badge)
   }
 }

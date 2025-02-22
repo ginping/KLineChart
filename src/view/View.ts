@@ -12,18 +12,19 @@
  * limitations under the License.
  */
 
-import Nullable from '../common/Nullable'
-import { EventHandler, EventName } from '../common/SyntheticEvent'
+import type Nullable from '../common/Nullable'
+import type { EventHandler, EventName } from '../common/SyntheticEvent'
 import Eventful from '../common/Eventful'
 import { isValid } from '../common/utils/typeChecks'
 
-import Figure from '../component/Figure'
-import Axis from '../component/Axis'
+import type Figure from '../component/Figure'
+import type { Axis } from '../component/Axis'
+import type { FigureCreate } from '../component/Figure'
 
 import { getInnerFigureClass } from '../extension/figure/index'
 
-import DrawWidget from '../widget/DrawWidget'
-import DrawPane from '../pane/DrawPane'
+import type DrawWidget from '../widget/DrawWidget'
+import type DrawPane from '../pane/DrawPane'
 
 export default abstract class View<C extends Axis = Axis> extends Eventful {
   /**
@@ -38,14 +39,15 @@ export default abstract class View<C extends Axis = Axis> extends Eventful {
 
   getWidget (): DrawWidget<DrawPane<C>> { return this._widget }
 
-  protected createFigure (name: string, attrs: any, styles: any, eventHandler?: EventHandler): Nullable<Figure> {
-    const FigureClazz = getInnerFigureClass(name)
+  protected createFigure (create: FigureCreate, eventHandler?: EventHandler): Nullable<Figure> {
+    const FigureClazz = getInnerFigureClass(create.name)
     if (FigureClazz !== null) {
-      const figure = new FigureClazz({ name, attrs, styles })
+      const figure = new FigureClazz(create)
       if (isValid(eventHandler)) {
         for (const key in eventHandler) {
-          // eslint-disable-next-line no-prototype-builtins
+          // eslint-disable-next-line no-prototype-builtins -- ignore
           if (eventHandler.hasOwnProperty(key)) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- ignore
             figure.registerEvent(key as EventName, eventHandler[key])
           }
         }
@@ -56,10 +58,10 @@ export default abstract class View<C extends Axis = Axis> extends Eventful {
     return null
   }
 
-  draw (ctx: CanvasRenderingContext2D): void {
+  draw (ctx: CanvasRenderingContext2D, ...extend: unknown[]): void {
     this.clear()
-    this.drawImp(ctx)
+    this.drawImp(ctx, extend)
   }
 
-  protected abstract drawImp (ctx: CanvasRenderingContext2D): void
+  protected abstract drawImp (ctx: CanvasRenderingContext2D, ...extend: unknown[]): void
 }
